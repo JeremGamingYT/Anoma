@@ -305,7 +305,23 @@ pub fn discover(resources: &Path, packs_dir: &Path) -> Vec<Pack> {
             out.push(p);
         }
     }
-    let mut user: Vec<Pack> = fs::read_dir(packs_dir)
+    out.extend(folder_packs(packs_dir, "file"));
+    out
+}
+/// The packs that stand in for the game's own textures: the folder and zip
+/// packs of `native-packs/` beside the resource root, by file name (later
+/// wins). They always apply, below the player's packs, and the pack screen
+/// never lists them; an empty folder gives the game's own textures back.
+pub fn native(resources: &Path) -> Vec<Pack> {
+    folder_packs(&native_dir(resources), "native")
+}
+/// `native-packs/`, beside the resource root.
+pub fn native_dir(resources: &Path) -> PathBuf {
+    resources.parent().unwrap_or(resources).join("native-packs")
+}
+/// The folder and zip packs in `dir`, by name, with ids `<kind>/<file name>`.
+fn folder_packs(dir: &Path, kind: &str) -> Vec<Pack> {
+    let mut packs: Vec<Pack> = fs::read_dir(dir)
         .into_iter()
         .flatten()
         .flatten()
@@ -319,12 +335,11 @@ pub fn discover(resources: &Path, packs_dir: &Path) -> Vec<Pack> {
             } else {
                 return None;
             };
-            pack(format!("file/{name}"), Text::literal(name), source)
+            pack(format!("{kind}/{name}"), Text::literal(name), source)
         })
         .collect();
-    user.sort_by(|a, b| a.id.cmp(&b.id));
-    out.extend(user);
-    out
+    packs.sort_by(|a, b| a.id.cmp(&b.id));
+    packs
 }
 /// A file a pack provides: its path (folder packs) and its name inside the pack.
 type Provided = (Option<PathBuf>, String);
@@ -997,6 +1012,25 @@ mod tests {
             br#"{"a":"vanilla","b":"pack"}"#
         );
         assert_eq!(fs::read(out.join("facts.json")).unwrap(), b"[]");
+        let _ = fs::remove_dir_all(base);
+    }
+    #[test]
+    fn native_packs_sit_beside_the_resources_in_name_order_and_off_the_screen() {
+        let base = std::env::temp_dir().join(format!("anoma-native-packs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let resources = base.join("26.3");
+        fs::create_dir_all(&resources).unwrap();
+        let meta = br#"{"pack":{"description":"d","pack_format":97}}"#;
+        for name in ["20 Food", "10 Blocks"] {
+            let dir = base.join("native-packs").join(name);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join("pack.mcmeta"), meta).unwrap();
+        }
+        fs::write(base.join("native-packs/notes.txt"), b"not a pack").unwrap();
+        let ids: Vec<_> = native(&resources).into_iter().map(|p| p.id).collect();
+        assert_eq!(ids, ["native/10 Blocks", "native/20 Food"]);
+        assert!(discover(&resources, &base.join("resourcepacks")).is_empty());
+        assert!(native(&base.join("elsewhere/26.3")).is_empty());
         let _ = fs::remove_dir_all(base);
     }
     #[test]

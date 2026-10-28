@@ -48,14 +48,16 @@ pub fn open_uri(uri: &str) {
     open_folder(Path::new(uri));
 }
 /// The resource root to load from, given the vanilla root, the selection and
-/// a server's packs, which go on top (`Pack.Position.TOP`, fixed).
+/// a server's packs, which go on top (`Pack.Position.TOP`, fixed). The native
+/// packs go under everything: they are the game's own textures.
 pub fn startup_root(
     vanilla: &Path,
     selected: &[String],
     server: &[Pack],
 ) -> std::io::Result<PathBuf> {
     let all = packs::discover(vanilla, &packs_dir());
-    let mut enabled = packs::enabled(&all, selected);
+    let mut enabled = packs::native(vanilla);
+    enabled.extend(packs::enabled(&all, selected));
     enabled.extend_from_slice(server);
     packs::resource_root(vanilla, &enabled, &cache_dir())
 }
