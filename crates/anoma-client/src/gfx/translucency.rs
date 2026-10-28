@@ -197,7 +197,12 @@ mod tests {
         assert!(!flat_and_disjoint([sheet[0], quad(0., 8., 4., 16., 61.9)]));
         assert!(!flat_and_disjoint([sheet[0], quad(15., 7., 20., 9., 62.9)]));
         assert!(!flat_and_disjoint([sheet[1], sheet[1]]));
-        assert!(!flat_and_disjoint([[[0., 0., 0.], [1., 1., 0.], [1., 1., 1.], [0., 0., 1.]]]));
+        assert!(!flat_and_disjoint([[
+            [0., 0., 0.],
+            [1., 1., 0.],
+            [1., 1., 1.],
+            [0., 0., 1.]
+        ]]));
         // Sharing an edge or a corner is no overlap.
         assert!(flat_and_disjoint([
             quad(0., 0., 1., 1., 0.),
