@@ -9,6 +9,7 @@ GPU time from timestamp queries.
 
     python3 tools/graphics_bench.py --label baseline
     python3 tools/graphics_bench.py --label baseline --offscreen   # the discrete GPU
+    python3 tools/graphics_bench.py --label far --lod-distance 1024   # with the far view
 
 `--offscreen` renders into a texture instead of the window, so the desktop's
 GPU can be measured even though the headless compositor (vscreen) only
@@ -96,6 +97,9 @@ def run_distance(args, ctl, env, cwd, distance):
     results = {}
     try:
         game.run("wait-ready", 300)
+        if args.lod_distance is not None:
+            # Far terrain past the render distance (Horizon's LOD Distance), in chunks.
+            game.run("lod-distance", args.lod_distance)
         status = game.run("status")
         results["renderer"] = status.get("renderer")
         for name, start, end, pitch in SCENES:
@@ -159,6 +163,8 @@ def main():
     p.add_argument("--seconds", type=float, default=12.0, help="flight duration per scene")
     p.add_argument("--settle", type=float, default=2.0, help="seconds to wait before each flight")
     p.add_argument("--offscreen", action="store_true", help="render offscreen on the discrete GPU")
+    p.add_argument("--lod-distance", type=int,
+                   help="far terrain distance in chunks (up to 1024), e.g. 1024 for the far view")
     p.add_argument("--resources", default=str(lab.RESOURCES))
     p.add_argument("--build", default=str(ROOT / "target/release"))
     p.add_argument("--out", help="JSON file (default benchmarks/graphics/<label>.json)")
@@ -184,6 +190,7 @@ def main():
         "commit": commit,
         "host": os.uname().nodename,
         "offscreen": args.offscreen,
+        "lod_distance": args.lod_distance,
         "seed": SEED,
         "flight_seconds": args.seconds,
         "scenes": {n: {"from": a, "to": b, "pitch": c} for n, a, b, c in SCENES},
