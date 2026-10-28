@@ -122,9 +122,16 @@ impl Renderer {
     pub fn upload_lod(&mut self, key: TileKey, mesh: &SectionMesh) {
         self.remove_lod(key);
         if let Some(bounds) = Bounds::mesh(mesh)
-            && let Some(mesh) = self.upload_mesh(mesh)
+            && let Some(mut gpu) = self.upload_mesh(mesh)
         {
-            self.lods.insert(key, Tile { mesh, bounds });
+            // A tile's sea is mostly one sheet: sorted once, not per block moved.
+            let quads = mesh.translucent.as_chunks::<4>().0;
+            gpu.sort.set_flat(super::translucency::flat_and_disjoint(
+                quads
+                    .iter()
+                    .map(|quad| std::array::from_fn(|i| quad[i].pos)),
+            ));
+            self.lods.insert(key, Tile { mesh: gpu, bounds });
         }
     }
 
