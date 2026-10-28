@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 
 const CELLS: usize = 16;
 
+#[derive(Hash)]
 pub(super) struct EdgeColumn {
     pub start: i32,
     pub end: i32,

@@ -32,7 +32,7 @@ const HELD_SAMPLE_STEP: std::time::Duration = std::time::Duration::from_millis(5
 /// The coarsest tile level: `Plan` roots cover at most 1024 chunks around.
 const MAX_LEVEL: u8 = 10;
 /// Top solid face and optional fluid face, in absolute block coordinates.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Surface {
     pub height: i32,
     pub state: BlockStateId,
@@ -40,7 +40,7 @@ pub struct Surface {
     pub biome: u16,
 }
 /// A half-open material run; gaps between runs remain air.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Span {
     pub min: i16,
     pub max: i16,
@@ -48,7 +48,7 @@ pub struct Span {
     pub biome: u16,
     pub light: u16,
 }
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Column {
     pub surface: Option<Surface>,
     pub spans: Vec<Span>,
@@ -517,6 +517,24 @@ impl MeshInput {
         }
         columns
     }
+    /// Two 64-bit hashes of everything the tile's mesh is made from, but
+    /// the covered columns (a change there makes its tile dirty itself).
+    fn fingerprint(&self, bounds: Option<[i32; 4]>) -> [u64; 2] {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let mut finer = self.finer.clone();
+        finer.sort_unstable();
+        [0u8, 1].map(|salt| {
+            let mut hasher = DefaultHasher::new();
+            salt.hash(&mut hasher);
+            self.key.hash(&mut hasher);
+            self.samples.hash(&mut hasher);
+            self.visited.hash(&mut hasher);
+            self.neighbors.hash(&mut hasher);
+            finer.hash(&mut hasher);
+            bounds.hash(&mut hasher);
+            hasher.finish()
+        })
+    }
 }
 impl ReducedColumns {
     fn new(columns: Arc<[Column; 256]>) -> Self {
@@ -552,6 +570,9 @@ enum Job {
     Mesh {
         snapshot: Snapshot,
         keys: Vec<TileKey>,
+        /// Active tiles a changed tile touches: meshed again only when
+        /// their inputs changed (their edges, or the finer tiles inside).
+        edges: Vec<TileKey>,
         finer: FxHashMap<TileKey, Vec<TileKey>>,
         covered: Arc<FxHashSet<(i32, i32)>>,
         bounds: Option<[i32; 4]>,
@@ -692,6 +713,8 @@ impl Lod {
                     );
                 }
                 let mut mesher = mesh::Mesher::default();
+                // Each active tile's last meshed inputs (`MeshInput::fingerprint`).
+                let mut meshed: FxHashMap<TileKey, [u64; 2]> = FxHashMap::default();
                 'work: loop {
                     for (key, columns) in sampler.drain_details() {
                         if tx
@@ -746,17 +769,25 @@ impl Lod {
                         Job::Mesh {
                             snapshot,
                             keys,
+                            edges,
                             mut finer,
                             covered,
                             bounds,
                         } => {
                             let mut meshes = Vec::with_capacity(keys.len());
-                            for key in keys {
+                            let edges = edges.into_iter().map(|key| (key, true));
+                            for (key, edge) in keys.into_iter().map(|key| (key, false)).chain(edges)
+                            {
                                 if worker.stop.load(Ordering::Relaxed) {
                                     break 'work;
                                 }
                                 let finer = finer.remove(&key).unwrap_or_default();
                                 let input = snapshot.mesh_input(key, finer);
+                                // Its uploaded mesh came from these very inputs.
+                                let print = input.fingerprint(bounds);
+                                if meshed.insert(key, print) == Some(print) && edge {
+                                    continue;
+                                }
                                 let mut mesh = mesher.mesh(
                                     input.key,
                                     &input.columns(),
@@ -769,6 +800,7 @@ impl Lod {
                                 mesh.sort_solid();
                                 meshes.push((input.key, mesh));
                             }
+                            meshed.retain(|key, _| snapshot.active.contains(key));
                             Done::Mesh {
                                 active: snapshot.active,
                                 meshes,
@@ -1250,32 +1282,39 @@ impl Lod {
             selected.retain(|key| key.level != 0 || !self.covered.contains(&(key.x, key.z)));
             let next: FxHashSet<_> = selected.iter().copied().collect();
             let changed: FxHashSet<_> = self.active.symmetric_difference(&next).copied().collect();
-            self.dirty.extend(touching(&next, &changed));
+            let mut edges = touching(&next, &changed);
             self.dirty.extend(next.difference(&self.active).copied());
             self.dirty.retain(|key| next.contains(key));
-            if !self.dirty.is_empty() || next != self.active {
-                let finer = Self::finer(&next, &self.dirty);
-                let samples = next
-                    .iter()
-                    .filter_map(|key| Some((*key, self.ready.get(key)?.clone())))
-                    .collect();
-                let keys: Vec<_> = self.dirty.drain().collect();
-                self.meshing = true;
-                self.shared.jobs.lock().unwrap().push_front(Job::Mesh {
-                    snapshot: Snapshot {
-                        active: next,
-                        samples,
-                        saved: self.saved.clone(),
-                        reduced: self.reduced.clone(),
-                    },
-                    keys,
-                    finer,
-                    covered: self.covered.clone(),
-                    bounds: self.covered_bounds,
-                });
-                self.shared.wake.notify_all();
+            edges.retain(|key| !self.dirty.contains(key));
+            if !self.dirty.is_empty() || !edges.is_empty() || next != self.active {
+                self.start_mesh(next, edges);
             }
         }
+    }
+    /// Meshes the dirty tiles of `next`, and those of `edges` whose inputs
+    /// changed, on the worker.
+    fn start_mesh(&mut self, next: FxHashSet<TileKey>, edges: FxHashSet<TileKey>) {
+        let meshed = self.dirty.union(&edges).copied().collect();
+        let finer = Self::finer(&next, &meshed);
+        let samples = next
+            .iter()
+            .filter_map(|key| Some((*key, self.ready.get(key)?.clone())))
+            .collect();
+        self.meshing = true;
+        self.shared.jobs.lock().unwrap().push_front(Job::Mesh {
+            snapshot: Snapshot {
+                active: next,
+                samples,
+                saved: self.saved.clone(),
+                reduced: self.reduced.clone(),
+            },
+            keys: self.dirty.drain().collect(),
+            edges: edges.into_iter().collect(),
+            finer,
+            covered: self.covered.clone(),
+            bounds: self.covered_bounds,
+        });
+        self.shared.wake.notify_all();
     }
     fn request_samples(
         &mut self,
@@ -2113,6 +2152,58 @@ mod tests {
             "one unfinished fine tile must not starve neighbouring requests"
         );
         Ok(())
+    }
+    #[test]
+    fn fingerprints_follow_edges_and_finer_tiles() {
+        let key = TileKey {
+            x: 0,
+            z: 0,
+            level: 1,
+        };
+        let right = TileKey { x: 1, ..key };
+        let samples = |height| {
+            Arc::new(vec![
+                Column::from_surface(Some(Surface {
+                    height,
+                    state: BlockStateId(1),
+                    water: None,
+                    biome: 0,
+                }));
+                CELLS * CELLS
+            ])
+        };
+        let mut snapshot = Snapshot {
+            active: [key].into_iter().chain(right.children()).collect(),
+            samples: [key, right]
+                .into_iter()
+                .chain(right.children())
+                .map(|key| (key, samples(60)))
+                .collect(),
+            saved: Default::default(),
+            reduced: Default::default(),
+        };
+        let print = |snapshot: &Snapshot, finer: Vec<TileKey>| {
+            snapshot.mesh_input(key, finer).fingerprint(None)
+        };
+        let first = print(&snapshot, Vec::new());
+        // A coarser tile behind finer ones leaves the edge as it was.
+        snapshot.active.insert(right);
+        assert_eq!(print(&snapshot, Vec::new()), first);
+        assert_ne!(
+            snapshot
+                .mesh_input(key, Vec::new())
+                .fingerprint(Some([0; 4])),
+            first
+        );
+        // A finer tile changing along the edge does not.
+        let [along, ..] = right.children();
+        snapshot.samples.insert(along, samples(61));
+        let second = print(&snapshot, Vec::new());
+        assert_ne!(second, first);
+        // The finer tiles inside count too, in any order.
+        let [a, b, ..] = key.children();
+        assert_eq!(print(&snapshot, vec![a, b]), print(&snapshot, vec![b, a]));
+        assert_ne!(print(&snapshot, vec![a]), second);
     }
     /// `select`'s former test: every tile against every change.
     fn touching_by_pairs(
