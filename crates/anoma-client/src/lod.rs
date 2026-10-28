@@ -492,8 +492,8 @@ type Reduced = FxHashMap<(i32, i32), Arc<ReducedColumns>>;
 struct Snapshot {
     active: FxHashSet<TileKey>,
     samples: FxHashMap<TileKey, Arc<Vec<Column>>>,
-    saved: Saved,
-    reduced: Reduced,
+    saved: Arc<Saved>,
+    reduced: Arc<Reduced>,
 }
 struct MeshInput {
     key: TileKey,
@@ -553,7 +553,7 @@ enum Job {
         snapshot: Snapshot,
         keys: Vec<TileKey>,
         finer: FxHashMap<TileKey, Vec<TileKey>>,
-        covered: FxHashSet<(i32, i32)>,
+        covered: Arc<FxHashSet<(i32, i32)>>,
         bounds: Option<[i32; 4]>,
     },
 }
@@ -616,13 +616,15 @@ pub struct Lod {
     active: FxHashSet<TileKey>,
     dirty: FxHashSet<TileKey>,
     removed: Vec<TileKey>,
-    covered: FxHashSet<(i32, i32)>,
+    /// Shared with the mesh job in flight, as are `saved` and `reduced`:
+    /// changes made meanwhile copy them (`Arc::make_mut`), once a job.
+    covered: Arc<FxHashSet<(i32, i32)>>,
     covered_bounds: Option<[i32; 4]>,
     /// The covered columns the active meshes leave out, when a mesh job
     /// has finished since the last `take_cutout`.
     cutout: Option<FxHashSet<(i32, i32)>>,
-    saved: Saved,
-    reduced: Reduced,
+    saved: Arc<Saved>,
+    reduced: Arc<Reduced>,
     saved_order: VecDeque<(i32, i32)>,
 }
 impl Lod {
@@ -770,7 +772,8 @@ impl Lod {
                             Done::Mesh {
                                 active: snapshot.active,
                                 meshes,
-                                covered,
+                                // Copied here, if still shared, not on the render thread.
+                                covered: Arc::unwrap_or_clone(covered),
                             }
                         }
                     };
@@ -810,11 +813,11 @@ impl Lod {
             active: FxHashSet::default(),
             dirty: FxHashSet::default(),
             removed: Vec::new(),
-            covered: FxHashSet::default(),
+            covered: Default::default(),
             covered_bounds: None,
             cutout: None,
-            saved: FxHashMap::default(),
-            reduced: FxHashMap::default(),
+            saved: Default::default(),
+            reduced: Default::default(),
             saved_order: VecDeque::new(),
         }
     }
@@ -936,13 +939,13 @@ impl Lod {
         if !self.saved.contains_key(&key) {
             while self.saved.len() >= MAX_SAVED {
                 if let Some(old) = self.saved_order.pop_front() {
-                    self.saved.remove(&old);
-                    self.reduced.remove(&old);
+                    Arc::make_mut(&mut self.saved).remove(&old);
+                    Arc::make_mut(&mut self.reduced).remove(&old);
                 }
             }
             self.saved_order.push_back(key);
         }
-        self.saved.insert(key, columns.columns.clone());
+        Arc::make_mut(&mut self.saved).insert(key, columns.columns.clone());
         self.finish_detail(key, columns);
     }
     fn apply_fine(&mut self, (cx, cz): (i32, i32), columns: &[Column; 256]) {
@@ -1023,7 +1026,7 @@ impl Lod {
         }
         self.apply_detail(key, &columns);
         if self.saved.contains_key(&key) {
-            self.reduced.insert(key, Arc::new(columns));
+            Arc::make_mut(&mut self.reduced).insert(key, Arc::new(columns));
         }
         self.invalidate_chunk(key.0, key.1);
     }
@@ -1194,7 +1197,7 @@ impl Lod {
     /// Takes the new full-detail columns, when they changed (`None`: not).
     fn cover(&mut self, covered: Option<FxHashSet<(i32, i32)>>) {
         if let Some(covered) = covered
-            && self.covered != covered
+            && *self.covered != covered
         {
             let changes: Vec<_> = self
                 .covered
@@ -1215,7 +1218,7 @@ impl Lod {
                     ],
                 })
             });
-            self.covered = covered;
+            self.covered = Arc::new(covered);
             self.replanned = true;
             self.reselect = true;
         }
@@ -1769,7 +1772,7 @@ mod tests {
         );
         // A chunk covers only one quarter of this parent's 32² cell. Both
         // opaque terrain and water must leave precisely that 16² footprint.
-        lod.covered.insert((-1, -2));
+        Arc::make_mut(&mut lod.covered).insert((-1, -2));
         lod.covered_bounds = Some([-16, -32, 0, -16]);
         let mesh = lod.mesh(key);
         let top_area = |vertices: &[TerrainVertex], y: f32| {
@@ -1983,7 +1986,7 @@ mod tests {
         lod.plan.nodes.insert(covered_fine);
         lod.ready
             .insert(covered_fine, Arc::new(vec![Column::default(); 256]));
-        lod.covered.insert((-1, -2));
+        Arc::make_mut(&mut lod.covered).insert((-1, -2));
         lod.reselect = true;
         lod.replanned = true;
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -2096,7 +2099,7 @@ mod tests {
         lod.active = (0..40).map(|x| TileKey { x, z: 0, level: 0 }).collect();
         lod.plan.split.clear();
         lod.detail_masks.clear();
-        lod.covered = [(0, 0)].into_iter().collect();
+        lod.covered = Arc::new([(0, 0)].into_iter().collect());
         lod.detail_request_pending = false;
         lod.detail_request_at = std::time::Instant::now() - std::time::Duration::from_secs(1);
         lod.request_detail([0, 0]);
