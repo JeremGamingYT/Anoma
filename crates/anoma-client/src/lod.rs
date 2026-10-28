@@ -2309,7 +2309,7 @@ mod tests {
         let changed = [at(1, 0, 0)].into_iter().collect();
         assert_eq!(touching(&tiles, &changed), tiles);
     }
-    /// `cargo test --profile fast -p horizon-client --lib lod::tests::touching_timing -- --ignored --nocapture`
+    /// `cargo test --profile fast -p anoma-client --lib lod::tests::touching_timing -- --ignored --nocapture`
     #[test]
     #[ignore = "timing, not a check"]
     fn touching_timing() {

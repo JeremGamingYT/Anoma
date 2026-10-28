@@ -98,7 +98,7 @@ def run_distance(args, ctl, env, cwd, distance):
     try:
         game.run("wait-ready", 300)
         if args.lod_distance is not None:
-            # Far terrain past the render distance (Horizon's LOD Distance), in chunks.
+            # Far terrain past the render distance (Anoma's LOD Distance), in chunks.
             game.run("lod-distance", args.lod_distance)
         status = game.run("status")
         results["renderer"] = status.get("renderer")
