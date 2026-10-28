@@ -356,6 +356,7 @@ impl Game<'_> {
             .map(|s| s.item.clone());
         let off = self.offhand.as_ref().map(|s| s.item.clone());
         let riding = self.riding.is_some();
+        let boat_yaw = self.ridden_boat_yaw();
         let hurt = p.health.hurt_animation_time;
         let Some(m) = self.player_model.as_mut() else {
             return;
@@ -402,6 +403,11 @@ impl Game<'_> {
         let diff = wrap(yaw - m.body_yaw);
         if diff.abs() > 50.0 {
             m.body_yaw += diff - diff.signum() * 50.0;
+        }
+        // AbstractBoat.positionRider's clampRotation: in a boat the body
+        // faces the bow, the head turning up to 105 degrees from it.
+        if let Some(boat_yaw) = boat_yaw {
+            m.body_yaw = boat_yaw;
         }
         // WalkAnimationState.update(min(distance * 4, 1), 0.4).
         let dist = (dx * dx + dz * dz + if flying { dy * dy } else { 0.0 }).sqrt() as f32;

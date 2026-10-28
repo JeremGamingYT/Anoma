@@ -357,7 +357,8 @@ impl Game<'_> {
                     let m = &self.mobs[j];
                     let animal = is_animal(m.species());
                     // Another player, on a server's client.
-                    let offset = if &*m.kind.id == "minecraft:player" {
+                    let player = &*m.kind.id == "minecraft:player";
+                    let offset = if player {
                         PLAYER_RIDING_OFFSET
                     } else {
                         riders::vehicle_attachment(m)
@@ -378,10 +379,11 @@ impl Game<'_> {
                         b.seat(index, count, animal, offset, false),
                         b.seat(index, count, animal, offset, true),
                         turns.then_some((b.yaw + turn, b.previous_yaw + turn)),
+                        player,
                     )
                 })
                 .collect();
-            for (j, at, previous, facing) in seats {
+            for (j, at, previous, facing, player) in seats {
                 let m = &mut self.mobs[j];
                 m.position = at;
                 m.previous = previous;
@@ -393,9 +395,16 @@ impl Game<'_> {
                 let Some((body, previous_body)) = facing else {
                     continue;
                 };
-                m.head_yaw += delta;
                 m.body_yaw = body;
                 m.previous_body_yaw = previous_body;
+                if player {
+                    // clampRotation for a passenger that is no Mob: another
+                    // player (its client turns it, not this one) keeps its
+                    // yaw within 105 degrees of the bow and its own head.
+                    m.yaw = super::boats::clamp_rotation(body, m.yaw);
+                    continue;
+                }
+                m.head_yaw += delta;
                 m.yaw = body;
                 m.previous_yaw = previous_body;
                 // Mob.clampHeadRotationToBody.

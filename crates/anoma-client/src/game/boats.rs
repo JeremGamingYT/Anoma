@@ -5,6 +5,7 @@
 use super::{Game, Keys, entity_culling::at, view_vector};
 use anoma_client::{
     blocks::Fluid,
+    camera::wrap_degrees,
     collisions::{EntityCollisions, SceneCollisions},
     items::ItemStack,
     mesher::Vertex,
@@ -187,6 +188,13 @@ pub(super) fn boat_wood(item: &str) -> Option<&str> {
     name.strip_suffix("_boat")
         .or_else(|| name.strip_suffix("_raft"))
         .filter(|w| !w.ends_with("_chest"))
+}
+/// `AbstractBoat.clampRotation` for a passenger that is not a `Mob` (a
+/// player): its yaw comes back to within 105 degrees of `boat_yaw`, the
+/// way its body faces (`calculatePassengerBodyYRot`).
+pub(super) fn clamp_rotation(boat_yaw: f32, yaw: f32) -> f32 {
+    let f = wrap_degrees(yaw - boat_yaw);
+    yaw + f.clamp(-105.0, 105.0) - f
 }
 /// A fluid's top: its block's y plus `FluidState.getHeight`, added in float
 /// as `isUnderwater`, `checkInWater` and `getWaterLevelAbove` do.
@@ -629,10 +637,8 @@ impl Game<'_> {
         let mut b = self.boats[i].clone();
         b.input = [keys.left, keys.right, keys.forward, keys.backward];
         let b = self.tick_boat(b, true);
-        // positionRider: the seat, turned with the boat; clampRotation to 105 degrees.
-        self.yaw += b.delta_rotation;
-        let delta = (self.yaw - b.yaw + 180.0).rem_euclid(360.0) - 180.0;
-        self.yaw += delta.clamp(-105.0, 105.0) - delta;
+        // positionRider: the seat, turned with the boat; clampRotation.
+        self.yaw = clamp_rotation(b.yaw, self.yaw + b.delta_rotation);
         self.boats[i] = b;
         let seat = self.player_boat_seat(i);
         if let Some(p) = self.player.as_mut() {
@@ -645,6 +651,20 @@ impl Game<'_> {
             self.riding = None;
         }
         Ok(())
+    }
+    /// The yaw of the boat the player rides, if it rides one.
+    pub(super) fn ridden_boat_yaw(&self) -> Option<f32> {
+        let id = self.riding?;
+        self.boats.iter().find(|b| b.id == id).map(|b| b.yaw)
+    }
+    /// `Entity.turn` -> `AbstractBoat.onPassengerTurned`: each turn of the
+    /// view in a boat is clamped at once (`clampRotation`), so the camera
+    /// stops 105 degrees either side of the bow as against a wall, instead
+    /// of turning freely until the next tick.
+    pub(super) fn on_passenger_turned(&mut self) {
+        if let Some(boat_yaw) = self.ridden_boat_yaw() {
+            self.yaw = clamp_rotation(boat_yaw, self.yaw);
+        }
     }
     /// `getDismountLocationForPassenger`: in front of the player if there is
     /// floor there, else on top of the boat.
@@ -994,6 +1014,27 @@ mod tests {
     /// A boat 0.5625 tall at `y`, inside one block in x and z.
     fn hull(y: f64) -> Aabb {
         Aabb::new(Vec3::new(0.2, y, 0.2), Vec3::new(0.8, y + HEIGHT, 0.8))
+    }
+
+    /// `clampRotation`: a passenger looks at most 105 degrees either side of
+    /// the bow, across the wrap at 180 too, and turning on against that
+    /// wall (one `onPassengerTurned` per turn) never comes round the back.
+    #[test]
+    fn a_passenger_turns_at_most_105_degrees_from_the_bow() {
+        assert_eq!(clamp_rotation(0.0, 100.0), 100.0);
+        assert_eq!(clamp_rotation(0.0, 150.0), 105.0);
+        assert_eq!(clamp_rotation(0.0, -170.0), -105.0);
+        assert_eq!(clamp_rotation(350.0, 100.0), 95.0);
+        assert_eq!(clamp_rotation(90.0, 720.0 + 80.0), 800.0);
+        let mut yaw = 0.0;
+        for _ in 0..40 {
+            yaw = clamp_rotation(30.0, yaw + 12.0);
+        }
+        assert_eq!(yaw, 135.0);
+        for _ in 0..60 {
+            yaw = clamp_rotation(30.0, yaw - 12.0);
+        }
+        assert_eq!(yaw, -75.0);
     }
 
     /// `getWaterLevelAbove` looks up through the last move's fall: a boat

@@ -3523,8 +3523,8 @@ mod tests {
     #[test]
     fn a_swimmer_who_boards_a_boat_stops_swimming_and_sits_up() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../.local/horizon-client")
-            .join(horizon_core::VANILLA_VERSION);
+            .join("../../.local/anoma-client")
+            .join(anoma_core::VANILLA_VERSION);
         if !root.join("movement-properties.nbt").exists() {
             return;
         }

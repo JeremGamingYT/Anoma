@@ -165,9 +165,7 @@ impl Game<'_> {
             b.input = [keys.left, keys.right, keys.forward, keys.backward];
             let b = self.tick_boat(b, true);
             // positionRider: the seat turns with the boat; clampRotation.
-            self.yaw += b.delta_rotation;
-            let delta = (self.yaw - b.yaw + 180.0).rem_euclid(360.0) - 180.0;
-            self.yaw += delta.clamp(-105.0, 105.0) - delta;
+            self.yaw = super::boats::clamp_rotation(b.yaw, self.yaw + b.delta_rotation);
             self.boats[i] = b;
             // In front of a mob that shares the boat.
             Some(self.player_boat_seat(i))

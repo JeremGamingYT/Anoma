@@ -13392,6 +13392,8 @@ impl ApplicationHandler for Game<'_> {
                     self.extras_retry()?;
                     self.apply_mouse_look();
                     self.pad_look(elapsed.as_secs_f32());
+                    // The frame's turns (mouse, stick, arrow keys) reach the boat.
+                    self.on_passenger_turned();
                     self.advance_flight();
                     let ticked = Instant::now();
                     let rendered = self.render()?;
