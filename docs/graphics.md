@@ -2,36 +2,36 @@
 
 ## Settings
 
-Horizon's graphics settings are two screens built from vanilla's widgets, opened from the top of **Video Settings** (**Horizon Graphics...** and **Advanced Graphics...**) or from **Options → Horizon Settings...**:
+Anoma's graphics settings are two screens built from vanilla's widgets, opened from the top of **Video Settings** (**Anoma Graphics...** and **Advanced Graphics...**) or from **Options → Anoma Settings...**:
 
 - **Graphics** (Simple): a preset (Performance, Balanced, Quality, Ultra or Custom) and LOD distance.
-- **Advanced Graphics**: every Horizon setting, grouped under Rendering, Quality, Display, Preferences, Performance and Overlay.
+- **Advanced Graphics**: every Anoma setting, grouped under Rendering, Quality, Display, Preferences, Performance and Overlay.
 
 Vanilla's own settings (render distance, FOV, framerate, VSync, GUI scale, smooth lighting...) stay where vanilla has them, in Video Settings; both screens leave them out.
 
 Every row has a one-line description and its cost in frame time (none, low, medium, high, or saves time for culling that makes frames faster), and applies at once, except worker threads, which apply at the next start. A preset sets the quality settings together; changing one of them turns it into Custom. Display preferences (FOV, framerate, VSync, GUI scale, fullscreen, present mode, pacing) leave the preset as it is.
 
-![Video Settings, with Horizon's buttons at the top](media/settings-simple.png)
+![Video Settings, with Anoma's buttons at the top](media/settings-simple.png)
 ![Advanced Graphics](media/settings-advanced.png)
 
 | Group | Setting | Stored in |
 | --- | --- | --- |
 | Rendering | render distance, simulation distance, entity distance | `options.txt` (vanilla keys) |
-| | LOD distance, cave culling, chunk updates per frame | `horizon-graphics.txt` |
+| | LOD distance, cave culling, chunk updates per frame | `anoma-graphics.txt` |
 | Quality | smooth lighting, mipmap levels, biome blend, clouds, cloud distance, weather radius, particles, entity shadows, cutout leaves | `options.txt` |
-| | sky, fog, weather, animated textures | `horizon-graphics.txt` |
+| | sky, fog, weather, animated textures | `anoma-graphics.txt` |
 | Display | FOV, max framerate, VSync, fullscreen, GUI scale | `options.txt` |
-| | resolution scale, anti-aliasing (FXAA), HDR, paper white, peak brightness, present mode, frame pacing | `horizon-graphics.txt` |
-| Performance | battery mode, worker threads, upload budget per frame | `horizon-graphics.txt` |
-| Overlay | performance overlay: FPS, frame/CPU/GPU times, frame-time graph | `horizon-graphics.txt` |
+| | resolution scale, anti-aliasing (FXAA), HDR, paper white, peak brightness, present mode, frame pacing | `anoma-graphics.txt` |
+| Performance | battery mode, worker threads, upload budget per frame | `anoma-graphics.txt` |
+| Overlay | performance overlay: FPS, frame/CPU/GPU times, frame-time graph | `anoma-graphics.txt` |
 
-`options.txt` keeps exactly vanilla's keys and values, so the options harness still compares it with vanilla; Horizon's settings live in `horizon-graphics.txt` beside it. Their defaults render as vanilla does: cave culling on, no upload budgets, sky, fog and weather on, 100% resolution, no FXAA, HDR off, the present mode following VSync. VSync on always waits for the display (Fifo), in a window and in fullscreen, as in vanilla; the present mode setting chooses how frames are shown only while VSync is off. Frame pacing defaults to Efficient: the limiter sleeps through the last half millisecond where vanilla spins, which changes timing, not pixels.
+`options.txt` keeps exactly vanilla's keys and values, so the options harness still compares it with vanilla; Anoma's settings live in `anoma-graphics.txt` beside it. Their defaults render as vanilla does: cave culling on, no upload budgets, sky, fog and weather on, 100% resolution, no FXAA, HDR off, the present mode following VSync. VSync on always waits for the display (Fifo), in a window and in fullscreen, as in vanilla; the present mode setting chooses how frames are shown only while VSync is off. Frame pacing defaults to Efficient: the limiter sleeps through the last half millisecond where vanilla spins, which changes timing, not pixels.
 
 **Battery mode** (Performance, off by default) is for laptops and handhelds: at most 60 frames per second in a world, 30 in menus without a world or while another window has focus, and half the automatic worker threads (chunks load slower). It changes only when frames are drawn: what they show and the game's 20 ticks per second stay as they are.
 
-**HDR** (Display, off by default) presents to an HDR10 swapchain (`Rgb10a2Unorm`, BT.2020 with the PQ curve) or, where only that is offered, an scRGB one (`Rgba16Float`, extended linear sRGB), on displays and compositors that offer either; `HORIZON_HDR_OUTPUT=pq` or `scrgb` allows only one. The frame is drawn exactly as in SDR, in vanilla's gamma space, and a last pass (`hdr.wgsl`) decodes it to linear light at the **Paper White** and lifts light sources (blocks that emit light, lava, the sun and the moon) towards the **Peak Brightness**; everything else stays as in SDR. The mesher puts the light a block's face emits in its vertex colour's alpha (`EMISSION_BITS`), the frame's alpha carries the mark, and only pixels that still show the world before the hand and HUD are lifted. On Vulkan, `horizon-hdr` sends HDR metadata (MaxCLL, mastering luminance), which wgpu doesn't: without it a compositor may clip everything above SDR white. KWin maps the content's reference white onto the desktop's SDR brightness, so on Linux the default Paper White matches SDR mode. `HORIZON_HDR_DEBUG=1` paints lifted pixels magenta. Not lifted yet: glowing particles, distant LOD terrain.
+**HDR** (Display, off by default) presents to an HDR10 swapchain (`Rgb10a2Unorm`, BT.2020 with the PQ curve) or, where only that is offered, an scRGB one (`Rgba16Float`, extended linear sRGB), on displays and compositors that offer either; `ANOMA_HDR_OUTPUT=pq` or `scrgb` allows only one. The frame is drawn exactly as in SDR, in vanilla's gamma space, and a last pass (`hdr.wgsl`) decodes it to linear light at the **Paper White** and lifts light sources (blocks that emit light, lava, the sun and the moon) towards the **Peak Brightness**; everything else stays as in SDR. The mesher puts the light a block's face emits in its vertex colour's alpha (`EMISSION_BITS`), the frame's alpha carries the mark, and only pixels that still show the world before the hand and HUD are lifted. On Vulkan, `anoma-hdr` sends HDR metadata (MaxCLL, mastering luminance), which wgpu doesn't: without it a compositor may clip everything above SDR white. KWin maps the content's reference white onto the desktop's SDR brightness, so on Linux the default Paper White matches SDR mode. `ANOMA_HDR_DEBUG=1` paints lifted pixels magenta. Not lifted yet: glowing particles, distant LOD terrain.
 
-Which settings each screen shows, their descriptions and costs are in `crates/horizon-client/src/graphics_ui.rs` (`rows`); `graphics_style.rs` draws them.
+Which settings each screen shows, their descriptions and costs are in `crates/anoma-client/src/graphics_ui.rs` (`rows`); `graphics_style.rs` draws them.
 
 ## Distant terrain
 
@@ -43,11 +43,11 @@ Unknown areas are sampled directly from the dimension's seed-bound density and s
 
 A separate bounded worker refines the nearest LOD levels with disposable ordinary chunk generation, including supported carvers, structures and decoration. Groups of 4×4 chunks share their generation halos, and each chunk is published once every neighbouring feature center has completed. Farther tiles use direct sampling rather than waiting for every intervening ordinary chunk. Saved and visited blocks take precedence over both paths. These temporary chunks never enter gameplay, simulation or normal save queues. Generated-column caches and request queues are bounded; far data is regenerated after reopening a world.
 
-Coverage and detail improve progressively; a large selected radius does not mean all its target detail is already resident. The control status reports target and sampled target tile counts separately. Direct far sampling approximates vertical noise interpolation, fluid boundaries and lighting; surface slopes and column extensions, small features and partial block shapes can differ. Unexplored distant structures are not synthesized by the direct path, and native decoration order can differ from subsequent gameplay generation. Horizon-supported data-driven noise and tree configurations can be reused; this does not execute arbitrary Fabric/NeoForge worldgen or structure mods.
+Coverage and detail improve progressively; a large selected radius does not mean all its target detail is already resident. The control status reports target and sampled target tile counts separately. Direct far sampling approximates vertical noise interpolation, fluid boundaries and lighting; surface slopes and column extensions, small features and partial block shapes can differ. Unexplored distant structures are not synthesized by the direct path, and native decoration order can differ from subsequent gameplay generation. Anoma-supported data-driven noise and tree configurations can be reused; this does not execute arbitrary Fabric/NeoForge worldgen or structure mods.
 
 Ordinary Overworld atmospheric fog extends with the selected LOD distance. Fog Off disables distance haze at large ranges too; fluid, darkness and boss fog retain their limits.
 
-The setting is stored as `lodDistance` in `horizon-graphics.txt`; `0` disables it. The official Far View mod (`mods/official/far-view`, [mods.md](mods.md)) turns the same distant terrain on from the mod browser, with its own distance and detail; the setting, when on, wins. Existing `renderDistance` in `options.txt` keeps its normal meaning for full chunks.
+The setting is stored as `lodDistance` in `anoma-graphics.txt`; `0` disables it. The official Far View mod (`mods/official/far-view`, [mods.md](mods.md)) turns the same distant terrain on from the mod browser, with its own distance and detail; the setting, when on, wins. Existing `renderDistance` in `options.txt` keeps its normal meaning for full chunks.
 
 Not implemented: anisotropic filtering (wgpu needs linear magnification for it, which blurs close blocks), MSAA (FXAA instead) and exclusive fullscreen (fullscreen is borderless).
 
@@ -56,15 +56,15 @@ Not implemented: anisotropic filtering (wgpu needs linear magnification for it, 
 `tools/graphics_bench.py` opens a fresh creative world (seed 1234) on a virtual screen and flies the camera along four fixed 192-block paths, over a village, a forest, the ocean and a mountain, at render distances 8, 16 and 32, one game per distance. Each flight takes 12 seconds and reports average FPS, 1% lows, frame-time percentiles, CPU time per frame (frame time minus waits for the GPU, the display and the limiter), the split of that CPU time (world update, ticks, frame preparation, renderer) for all frames and for the slowest 1%, and GPU time per frame from timestamp queries.
 
 ```sh
-cargo build --release -p horizon-client --bins
+cargo build --release -p anoma-client --bins
 python3 tools/graphics_bench.py --label mine                 # lavapipe on vscreen: CPU-side numbers
 python3 tools/graphics_bench.py --label mine-gpu --offscreen  # the desktop's RTX 4080
 python3 tools/graphics_bench.py --compare baseline-4080 mine-gpu   # markdown table
 ```
 
-vscreen is a headless compositor whose frames are software-rendered (lavapipe), so its frame times measure the CPU, rasterisation included. `--offscreen` (`horizon-client --offscreen`) renders into a texture on the most powerful GPU instead of the window, which measures the RTX 4080 under the same compositor. `--distances`, `--scenes` and `--build` pick a subset or another build. Results go to `benchmarks/graphics/<label>.json`, with the load average before and after: the desktop is shared, and other sessions' builds move the numbers.
+vscreen is a headless compositor whose frames are software-rendered (lavapipe), so its frame times measure the CPU, rasterisation included. `--offscreen` (`anoma-client --offscreen`) renders into a texture on the most powerful GPU instead of the window, which measures the RTX 4080 under the same compositor. `--distances`, `--scenes` and `--build` pick a subset or another build. Results go to `benchmarks/graphics/<label>.json`, with the load average before and after: the desktop is shared, and other sessions' builds move the numbers.
 
-Two tools find where a slow frame goes: `HORIZON_SPIKES=MS` prints the timed spans (ticks by system, streaming, uploads, saving, renderer) of every frame slower than MS milliseconds, with the render thread's CPU time in the frame and, after a span that mostly waited (for the GPU, a lock or a core), its CPU time (`submit 30.2/0.1`), and a frame-pointer build (`RUSTFLAGS="-C force-frame-pointers=yes"`) profiles with `perf record --call-graph fp`.
+Two tools find where a slow frame goes: `ANOMA_SPIKES=MS` prints the timed spans (ticks by system, streaming, uploads, saving, renderer) of every frame slower than MS milliseconds, with the render thread's CPU time in the frame and, after a span that mostly waited (for the GPU, a lock or a core), its CPU time (`submit 30.2/0.1`), and a frame-pointer build (`RUSTFLAGS="-C force-frame-pointers=yes"`) profiles with `perf record --call-graph fp`.
 
 ## Results
 

@@ -5,7 +5,7 @@
 //! is made once per appearance and scale, then reused; Home's landscape is made again only when
 //! the window grows wider than it.
 use gpui::{RenderImage, Window};
-use horizon_theme as tokens;
+use anoma_theme as tokens;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -178,7 +178,7 @@ pub struct Palette {
     trees: u32,
 }
 
-/// The sunset of Horizon's first icon: night blue to violet to coral, and a sun in three bands.
+/// The sunset of Anoma's first icon: night blue to violet to coral, and a sun in three bands.
 pub const SUNSET: Palette = Palette {
     sky: &[
         0x0a0f2c, 0x26206a, 0x4b2a7e, 0x7c3a88, 0xc4527a, 0xee6e5a, 0xffb25e,
@@ -205,7 +205,7 @@ pub const DAWN: Palette = Palette {
 };
 
 /// A blocky landscape, `w` by `h` texels: banded sky, a sun half set behind the far hills and cut
-/// into slices like Horizon's mark, flat clouds, three ridges of hills and a few square trees.
+/// into slices like Anoma's mark, flat clouds, three ridges of hills and a few square trees.
 /// Each part draws from its own generator from left to right, so a wider landscape only adds
 /// columns: the first `w` are the same at every width, and a resized window keeps its view.
 pub fn scene(p: &Palette, seed: u32, w: usize, h: usize) -> Vec<u32> {
@@ -215,8 +215,8 @@ pub fn scene(p: &Palette, seed: u32, w: usize, h: usize) -> Vec<u32> {
         Rng(seeds.0)
     };
     let mut out = vec![0; w * h];
-    let horizon = h * 62 / 100;
-    let band = horizon as f32 / p.sky.len() as f32;
+    let anoma = h * 62 / 100;
+    let band = anoma as f32 / p.sky.len() as f32;
     for y in 0..h {
         let f = y as f32 / band;
         let i = (f as usize).min(p.sky.len() - 1);
@@ -242,7 +242,7 @@ pub fn scene(p: &Palette, seed: u32, w: usize, h: usize) -> Vec<u32> {
     for stretch in 0..w.div_ceil(CLOUDS) {
         for _ in 0..4 {
             let cx = (stretch * CLOUDS) as isize + (clouds.next() * CLOUDS as f32) as isize;
-            let cy = (horizon as f32 * (0.12 + clouds.next() * 0.4)) as isize;
+            let cy = (anoma as f32 * (0.12 + clouds.next() * 0.4)) as isize;
             let cw = 10 + (clouds.next() * 14.) as usize;
             let under = p.sky[((cy as f32 / band) as usize + 1).min(p.sky.len() - 1)];
             let c = mix(under, 0xffffff, 0.12);
@@ -252,7 +252,7 @@ pub fn scene(p: &Palette, seed: u32, w: usize, h: usize) -> Vec<u32> {
     }
     // The sun, where it was when the landscape had one width (two thirds of 220 texels).
     let r = (h as f32 * 0.2) as isize;
-    let (cx, cy) = (149, horizon as isize - (h as f32 * 0.11) as isize);
+    let (cx, cy) = (149, anoma as isize - (h as f32 * 0.11) as isize);
     for dy in -r..=0 {
         let half = ((r * r - dy * dy) as f32).sqrt().round() as isize;
         let t = (dy + r) as f32 / r as f32;
@@ -281,11 +281,11 @@ pub fn scene(p: &Palette, seed: u32, w: usize, h: usize) -> Vec<u32> {
     };
     let hf = h as f32;
     let layers = [
-        (p.far, horizon as f32 - hf * 0.1, hf * 0.12, 3.2, None),
-        (p.mid, horizon as f32 + hf * 0.02, hf * 0.09, 2.6, None),
+        (p.far, anoma as f32 - hf * 0.1, hf * 0.12, 3.2, None),
+        (p.mid, anoma as f32 + hf * 0.02, hf * 0.09, 2.6, None),
         (
             p.near,
-            horizon as f32 + hf * 0.18,
+            anoma as f32 + hf * 0.18,
             hf * 0.07,
             2.2,
             Some(p.top),

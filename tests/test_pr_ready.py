@@ -5,11 +5,11 @@ from unittest import mock
 
 from tools import pr_ready
 
-PACKAGES = {"horizon-core": "crates/horizon-core", "horizon-client": "crates/horizon-client",
-            "horizon-theme": "crates/horizon-theme", "xtask": "xtask"}
+PACKAGES = {"anoma-core": "crates/anoma-core", "anoma-client": "crates/anoma-client",
+            "anoma-theme": "crates/anoma-theme", "xtask": "xtask"}
 LIBRARIES = set(PACKAGES) - {"xtask"}
-DEPENDENCIES = {"horizon-client": {"horizon-core"}}
-MODS = " --features horizon-client/mods,horizon-mods/pack"
+DEPENDENCIES = {"anoma-client": {"anoma-core"}}
+MODS = " --features anoma-client/mods,anoma-mods/pack"
 CLIPPY = pr_ready.CI_CLIPPY + " && " + pr_ready.CI_CLIPPY_SERVER
 
 
@@ -19,41 +19,41 @@ def args(host="local", quick=False):
 
 class PrReadyTests(unittest.TestCase):
     def test_paths_map_to_the_crates_that_own_them(self):
-        self.assertEqual(pr_ready.touched_crates({"crates/horizon-core/src/jmath.rs", "crates/horizon-client/build.rs",
+        self.assertEqual(pr_ready.touched_crates({"crates/anoma-core/src/jmath.rs", "crates/anoma-client/build.rs",
                                                   "xtask/src/main.rs", "tools/parity.py"}, PACKAGES),
-                         ["horizon-client", "horizon-core", "xtask"])
-        self.assertEqual(pr_ready.touched_crates({"crates/horizon-core/README.md"}, PACKAGES), [])
-        # The generated stylesheet is checked by horizon-theme's tests.
-        self.assertEqual(pr_ready.touched_crates({"crates/horizon-theme/tokens.css"}, PACKAGES), ["horizon-theme"])
+                         ["anoma-client", "anoma-core", "xtask"])
+        self.assertEqual(pr_ready.touched_crates({"crates/anoma-core/README.md"}, PACKAGES), [])
+        # The generated stylesheet is checked by anoma-theme's tests.
+        self.assertEqual(pr_ready.touched_crates({"crates/anoma-theme/tokens.css"}, PACKAGES), ["anoma-theme"])
         # A crate whose name prefixes another's directory doesn't own it.
-        self.assertEqual(pr_ready.touched_crates({"crates/horizon-core-extra/x.rs"}, PACKAGES), [])
+        self.assertEqual(pr_ready.touched_crates({"crates/anoma-core-extra/x.rs"}, PACKAGES), [])
         # The workspace manifest and lock touch every crate.
-        self.assertIsNone(pr_ready.touched_crates({"Cargo.lock", "crates/horizon-core/src/lib.rs"}, PACKAGES))
+        self.assertIsNone(pr_ready.touched_crates({"Cargo.lock", "crates/anoma-core/src/lib.rs"}, PACKAGES))
 
     def test_which_workspace_builds_a_path(self):
-        self.assertTrue(pr_ready.workspace_rust("crates/horizon-theme/fonts/x.ttf"))
+        self.assertTrue(pr_ready.workspace_rust("crates/anoma-theme/fonts/x.ttf"))
         self.assertTrue(pr_ready.workspace_rust("Cargo.toml"))
-        self.assertFalse(pr_ready.workspace_rust("crates/horizon-client/README.md"))
+        self.assertFalse(pr_ready.workspace_rust("crates/anoma-client/README.md"))
         self.assertFalse(pr_ready.workspace_rust("launcher/src/main.rs"))
         self.assertTrue(pr_ready.launcher_rust("launcher/src/main.rs"))
         # CI's launcher job also runs for the root workspace's manifests and for its own check.
         self.assertTrue(pr_ready.launcher_rust("Cargo.lock"))
         self.assertTrue(pr_ready.launcher_rust("tools/ci/rust_changes.py"))
-        self.assertTrue(pr_ready.launcher_rust("crates/horizon-prepare/src/lib.rs"))
-        self.assertTrue(pr_ready.launcher_rust("crates/horizon-theme/src/lib.rs"))
-        self.assertTrue(pr_ready.launcher_rust("crates/horizon-telemetry/src/lib.rs"))
+        self.assertTrue(pr_ready.launcher_rust("crates/anoma-prepare/src/lib.rs"))
+        self.assertTrue(pr_ready.launcher_rust("crates/anoma-theme/src/lib.rs"))
+        self.assertTrue(pr_ready.launcher_rust("crates/anoma-telemetry/src/lib.rs"))
         self.assertFalse(pr_ready.launcher_rust("launcher/links.json"))
         self.assertFalse(pr_ready.launcher_rust("launcher/README.md"))
-        self.assertFalse(pr_ready.launcher_rust("crates/horizon-client/src/game.rs"))
+        self.assertFalse(pr_ready.launcher_rust("crates/anoma-client/src/game.rs"))
 
     def test_crate_checks_do_not_link_unrelated_examples(self):
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
-            steps = pr_ready.plan(args(quick=True), "origin/main", {"crates/horizon-client/src/game.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
+            steps = pr_ready.plan(args(quick=True), "origin/main", {"crates/anoma-client/src/game.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
         by_name = {step.name: step for step in steps}
         self.assertEqual(by_name["clippy"].command, CLIPPY)
-        self.assertEqual(by_name["tests: horizon-client"].command,
-                         "cargo test --locked -p horizon-client --features horizon-client/mods --tests")
-        self.assertEqual(by_name["doc tests"].command, "cargo test --locked -p horizon-client --doc")
+        self.assertEqual(by_name["tests: anoma-client"].command,
+                         "cargo test --locked -p anoma-client --features anoma-client/mods --tests")
+        self.assertEqual(by_name["doc tests"].command, "cargo test --locked -p anoma-client --doc")
         self.assertIsNone(by_name["doc tests"].status)
 
     def test_content_root_tests_run_only_when_what_they_load_changes(self):
@@ -61,9 +61,9 @@ class PrReadyTests(unittest.TestCase):
             with mock.patch.object(pr_ready, "affected_here", return_value=[]):
                 steps = pr_ready.plan(args(quick=True), "origin/main", {path}, PACKAGES, LIBRARIES, DEPENDENCIES)
             return {step.name: step for step in steps}["content root tests"]
-        self.assertEqual(content_step("crates/horizon-client/src/game.rs").skip, "content root untouched")
-        for path in ["crates/horizon-client/src/mod_content.rs", "crates/horizon-client/src/mod_content_tests.rs",
-                     "crates/horizon-mods/src/content.rs", "crates/horizon-assets/src/lib.rs", "Cargo.lock"]:
+        self.assertEqual(content_step("crates/anoma-client/src/game.rs").skip, "content root untouched")
+        for path in ["crates/anoma-client/src/mod_content.rs", "crates/anoma-client/src/mod_content_tests.rs",
+                     "crates/anoma-mods/src/content.rs", "crates/anoma-assets/src/lib.rs", "Cargo.lock"]:
             with self.subTest(path=path):
                 step = content_step(path)
                 self.assertIsNone(step.skip)
@@ -80,15 +80,15 @@ class PrReadyTests(unittest.TestCase):
                 self.assertEqual(by_name["doc tests"].command, "cargo test --locked --workspace --doc")
 
     def test_tests_get_the_features_ci_s_workspace_run_gives_them(self):
-        self.assertEqual(pr_ready.mod_features(["horizon-world"]), "")
-        self.assertEqual(pr_ready.mod_features(["horizon-client"]), " --features horizon-client/mods")
-        self.assertEqual(pr_ready.mod_features(["horizon-mods"]),
-                         " --features horizon-mods/runtime,horizon-mods/pack,horizon-mods/index")
+        self.assertEqual(pr_ready.mod_features(["anoma-world"]), "")
+        self.assertEqual(pr_ready.mod_features(["anoma-client"]), " --features anoma-client/mods")
+        self.assertEqual(pr_ready.mod_features(["anoma-mods"]),
+                         " --features anoma-mods/runtime,anoma-mods/pack,anoma-mods/index")
         self.assertEqual(pr_ready.mod_features(None), MODS)
 
     def test_python_tests_always_run(self):
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
-            steps = pr_ready.plan(args(quick=True), "origin/main", {"crates/horizon-core/src/lib.rs"},
+            steps = pr_ready.plan(args(quick=True), "origin/main", {"crates/anoma-core/src/lib.rs"},
                                   PACKAGES, LIBRARIES, DEPENDENCIES)
         self.assertIsNone({step.name: step for step in steps}["Python tests"].status)
 
@@ -103,10 +103,10 @@ class PrReadyTests(unittest.TestCase):
     def test_multiple_touched_crates_share_the_same_check_scope(self):
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
             steps = pr_ready.plan(args(), "origin/main",
-                                  {"crates/horizon-core/src/lib.rs", "crates/horizon-client/examples/probe.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
+                                  {"crates/anoma-core/src/lib.rs", "crates/anoma-client/examples/probe.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
         for step in steps:
-            if step.name in ("tests: horizon-client, horizon-core", "doc tests"):
-                self.assertIn("-p horizon-client -p horizon-core", step.command)
+            if step.name in ("tests: anoma-client, anoma-core", "doc tests"):
+                self.assertIn("-p anoma-client -p anoma-core", step.command)
                 self.assertIsNone(step.status)
 
     def test_binary_only_crates_skip_doc_tests(self):
@@ -118,13 +118,13 @@ class PrReadyTests(unittest.TestCase):
         self.assertEqual(by_name["doc tests"].status, "skip")
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
             steps = pr_ready.plan(args(), "origin/main",
-                                  {"xtask/src/main.rs", "crates/horizon-core/src/lib.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
+                                  {"xtask/src/main.rs", "crates/anoma-core/src/lib.rs"}, PACKAGES, LIBRARIES, DEPENDENCIES)
         by_name = {step.name: step for step in steps}
-        self.assertEqual(by_name["doc tests"].command, "cargo test --locked -p horizon-core --doc")
+        self.assertEqual(by_name["doc tests"].command, "cargo test --locked -p anoma-core --doc")
 
     def test_clippy_is_ci_s_and_the_server_build_when_the_game_is_affected(self):
-        packages = {name: f"crates/{name}" for name in ("core", "world", "horizon-client", "unrelated")}
-        dependencies = {"world": {"core"}, "horizon-client": {"world"}, "unrelated": set()}
+        packages = {name: f"crates/{name}" for name in ("core", "world", "anoma-client", "unrelated")}
+        dependencies = {"world": {"core"}, "anoma-client": {"world"}, "unrelated": set()}
         with mock.patch.object(pr_ready, "affected_here", return_value=[]):
             steps = pr_ready.plan(args(), "origin/main", {"crates/core/src/lib.rs"},
                                   packages, set(packages), dependencies)
@@ -167,11 +167,11 @@ class PrReadyTests(unittest.TestCase):
         self.assertEqual(pr_ready.dependent_crates(["core"], dependencies), ["build", "core", "dev", "optional"])
 
     def test_scope_warns_on_size_and_mixed_areas(self):
-        self.assertEqual(pr_ready.scope_warnings({"crates/horizon-client/src/game.rs", "tools/test_food_parity.py",
-                                                  "mods/horizon/src/test/java/dev/horizonlab/parity/X.java",
+        self.assertEqual(pr_ready.scope_warnings({"crates/anoma-client/src/game.rs", "tools/test_food_parity.py",
+                                                  "mods/anoma/src/test/java/dev/anomalab/parity/X.java",
                                                   "docs/native-client.md"}, 120), [])
-        self.assertEqual(pr_ready.scope_warnings({"crates/horizon-theme/src/lib.rs", "launcher/src/theme.rs"}, 10), [])
-        warnings = pr_ready.scope_warnings({"crates/horizon-client/src/game.rs", "launcher/src/main.rs",
+        self.assertEqual(pr_ready.scope_warnings({"crates/anoma-theme/src/lib.rs", "launcher/src/theme.rs"}, 10), [])
+        warnings = pr_ready.scope_warnings({"crates/anoma-client/src/game.rs", "launcher/src/main.rs",
                                             ".github/workflows/ci.yml"}, 900)
         self.assertEqual(len(warnings), 2)
         self.assertIn("900 lines of code: over 500", warnings[0])
@@ -179,22 +179,22 @@ class PrReadyTests(unittest.TestCase):
 
     def test_documentation_and_tests_are_not_counted_in_the_size(self):
         self.assertTrue(pr_ready.reviewed("tools/pr_ready.py"))
-        self.assertTrue(pr_ready.reviewed("crates/horizon-client/src/game.rs"))
+        self.assertTrue(pr_ready.reviewed("crates/anoma-client/src/game.rs"))
         self.assertFalse(pr_ready.reviewed("CONTRIBUTING.md"))
         self.assertFalse(pr_ready.reviewed("tests/test_pr_ready.py"))
         self.assertFalse(pr_ready.reviewed("tools/test_food_parity.py"))
-        self.assertFalse(pr_ready.reviewed("crates/horizon-core/tests/jmath.rs"))
+        self.assertFalse(pr_ready.reviewed("crates/anoma-core/tests/jmath.rs"))
 
     def test_cargo_lock_changes_only_with_a_manifest(self):
-        self.assertIsNone(pr_ready.lock_problem({"crates/horizon-core/src/lib.rs"}))
-        self.assertIsNone(pr_ready.lock_problem({"Cargo.lock", "crates/horizon-client/Cargo.toml"}))
-        self.assertIsNone(pr_ready.lock_problem({"launcher/Cargo.lock", "crates/horizon-theme/Cargo.toml"}))
-        self.assertIn("Cargo.lock", pr_ready.lock_problem({"Cargo.lock", "crates/horizon-core/src/lib.rs"}))
+        self.assertIsNone(pr_ready.lock_problem({"crates/anoma-core/src/lib.rs"}))
+        self.assertIsNone(pr_ready.lock_problem({"Cargo.lock", "crates/anoma-client/Cargo.toml"}))
+        self.assertIsNone(pr_ready.lock_problem({"launcher/Cargo.lock", "crates/anoma-theme/Cargo.toml"}))
+        self.assertIn("Cargo.lock", pr_ready.lock_problem({"Cargo.lock", "crates/anoma-core/src/lib.rs"}))
 
     def test_label_follows_what_players_get(self):
         self.assertEqual(pr_ready.suggested_label({"tools/pr_ready.py", "CONTRIBUTING.md"}), "`skip-release`")
-        self.assertEqual(pr_ready.suggested_label({"crates/horizon-world/examples/probe.rs"}), "`skip-release`")
-        self.assertIn("feature", pr_ready.suggested_label({"crates/horizon-client/src/game.rs"}))
+        self.assertEqual(pr_ready.suggested_label({"crates/anoma-world/examples/probe.rs"}), "`skip-release`")
+        self.assertIn("feature", pr_ready.suggested_label({"crates/anoma-client/src/game.rs"}))
         self.assertIn("feature", pr_ready.suggested_label({"launcher/src/main.rs"}))
 
     def test_affected_harnesses_come_from_the_parity_runner(self):
@@ -202,29 +202,29 @@ class PrReadyTests(unittest.TestCase):
                  "datafix#2": "tools/test_datafix_parity.py"}
         with mock.patch.object(pr_ready.parity, "harnesses", return_value=found), \
                 mock.patch.object(pr_ready.parity, "load_state", return_value={"harnesses": {
-                    "food": {"dependencies": ["crates/horizon-world/src/food.rs"]},
-                    "datafix#1": {"dependencies": ["crates/horizon-world/src/datafix.rs"]},
-                    "datafix#2": {"dependencies": ["crates/horizon-world/src/datafix.rs"]}}}), \
+                    "food": {"dependencies": ["crates/anoma-world/src/food.rs"]},
+                    "datafix#1": {"dependencies": ["crates/anoma-world/src/datafix.rs"]},
+                    "datafix#2": {"dependencies": ["crates/anoma-world/src/datafix.rs"]}}}), \
                 mock.patch.object(pr_ready.parity, "ROOT", pr_ready.parity.Path(".")):
-            self.assertEqual(pr_ready.affected_here({"crates/horizon-world/src/datafix.rs"}), ["datafix"])
+            self.assertEqual(pr_ready.affected_here({"crates/anoma-world/src/datafix.rs"}), ["datafix"])
             self.assertEqual(pr_ready.affected_here({"README.md"}), [])
             self.assertEqual(pr_ready.affected_here({"Cargo.lock"}), ["food", "datafix"])
 
     def test_harnesses_are_listed_when_they_cannot_run(self):
-        changed = {"crates/horizon-world/src/food.rs"}
+        changed = {"crates/anoma-world/src/food.rs"}
         with mock.patch.object(pr_ready, "affected_here", return_value=["food", "light"]):
-            steps = pr_ready.plan(args(quick=True), "origin/main", changed, {"horizon-world": "crates/horizon-world"}, {"horizon-world"}, {})
+            steps = pr_ready.plan(args(quick=True), "origin/main", changed, {"anoma-world": "crates/anoma-world"}, {"anoma-world"}, {})
         harness = steps[-1]
         self.assertEqual(harness.status, "list")
         self.assertIn("2 affected, to run in CI (--quick): food, light", harness.detail)
         by_name = {step.name: step for step in steps}
-        self.assertIn("tests: horizon-world", by_name)
+        self.assertIn("tests: anoma-world", by_name)
         self.assertEqual(by_name["launcher clippy"].status, "skip")
         self.assertIsNone(by_name["clippy"].status)
         with mock.patch.object(pr_ready, "affected_here", return_value=["food"]):
-            steps = pr_ready.plan(args(host="macmini"), "origin/main", changed, {"horizon-world": "crates/horizon-world"}, {"horizon-world"}, {})
+            steps = pr_ready.plan(args(host="macmini"), "origin/main", changed, {"anoma-world": "crates/anoma-world"}, {"anoma-world"}, {})
         self.assertIn("--changed-files", steps[-1].command)
-        self.assertIn("crates/horizon-world/src/food.rs", steps[-1].command)
+        self.assertIn("crates/anoma-world/src/food.rs", steps[-1].command)
 
     def test_summaries_of_check_output(self):
         output = "test result: ok. 3 passed; 0 failed;\ntest result: FAILED. 4 passed; 1 failed;\n"

@@ -57,11 +57,11 @@ source file has been deleted.
 ## Reproduce
 
 ```sh
-export CARGO_TARGET_DIR=/home/bob/Documents/horizon/target
+export CARGO_TARGET_DIR=/home/bob/Documents/anoma/target
 export CARGO_INCREMENTAL=0
-cargo run -p horizon-client --profile fast --example model_states_bench -- 15
-cargo test -p horizon-client --profile fast --example model_states_bench
-cargo clippy -p horizon-client --all-targets --profile fast -- -D warnings
+cargo run -p anoma-client --profile fast --example model_states_bench -- 15
+cargo test -p anoma-client --profile fast --example model_states_bench
+cargo clippy -p anoma-client --all-targets --profile fast -- -D warnings
 cargo fmt --all -- --check
 ```
 

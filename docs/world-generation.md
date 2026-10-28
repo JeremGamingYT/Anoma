@@ -1,7 +1,7 @@
 # World generation
 
-Horizon targets the repository-pinned Minecraft Java Edition **26.3**.
-`horizon_world::worldgen::decode_noise` implements its direct normal-noise JSON
+Anoma targets the repository-pinned Minecraft Java Edition **26.3**.
+`anoma_world::worldgen::decode_noise` implements its direct normal-noise JSON
 codec. `DensityRegistry` decodes named density definitions and `NoiseRouter`
 loads the eight router roots against the same graph. `AquiferConfig` binds the six
 aquifer density roots, and `NoiseBasedAquifer` implements underground fluid and
@@ -115,7 +115,7 @@ prepared volume.
 The runner exports built-in parameter tables independently from both authenticated
 JARs, requires them to agree and keeps them private. These contain 7,594 Overworld
 entries covering 56 biome identifiers and five Nether entries. Rust loads the
-quantized tables using a Horizon import format. This is an import of built-in
+quantized tables using a Anoma import format. This is an import of built-in
 data; the preset builders and vanilla biome codecs remain pending. The reference
 uses actual `MultiNoiseBiomeSource` resolvers with keyed registration holders.
 These checks resolve identities without evaluating biome properties or gameplay.
@@ -195,10 +195,10 @@ above remains a record of its narrower tested source snapshot.
 
 `tools/test_chunk_generation_parity.py` generates chunks in actual vanilla classes (`VanillaChunkGenerationOracle`: structure starts and
 references, biomes, noise, surface, carvers, then biome decoration and structure pieces through real `WorldGenRegion`s) and with
-`crates/horizon-world/examples/probe/chunk_dump.rs`, and compares every block state, quart biome and block entity (canonical NBT) of each target
+`crates/anoma-world/examples/probe/chunk_dump.rs`, and compares every block state, quart biome and block entity (canonical NBT) of each target
 chunk, and the scheduled block and fluid ticks each proto chunk carries into the live world. Cases are terrain sites for several seeds
 across the overworld, Nether and End, plus rectangles around every structure kind found by scanning the seed. `--phase structures`
-isolates terrain plus structure pieces, `--phase terrain` stops before features. `HORIZON_ORDER` (a file of `x z` lines) makes both sides
+isolates terrain plus structure pieces, `--phase terrain` stops before features. `ANOMA_ORDER` (a file of `x z` lines) makes both sides
 decorate in that order instead of row-major.
 
 ### Decoration order
@@ -223,8 +223,8 @@ Result on seed 12345 (overworld 42 sites / 372 chunks, Nether, End): structure p
 generation 4 differing chunks (3 blocks, 1 block entity) out of 372; Nether and End terrain sites 0 differences.
 
 Harness normalisations (not generation differences): sections above the noise height (Nether roof, End sky) are all air in vanilla and
-absent in Horizon; structure templates keep their stored NBT integer width; a vanilla block entity left as a `DUMMY` default is equal to no
-Horizon entry; `LootTableSeed` without a `LootTable` and a vault's default reward table are ignored.
+absent in Anoma; structure templates keep their stored NBT integer width; a vanilla block entity left as a `DUMMY` default is equal to no
+Anoma entry; `LootTableSeed` without a `LootTable` and a vault's default reward table are ignored.
 
 Remaining known differences: a handful of single blocks near structure pieces in full generation (abandoned camps, shipwreck, villages) that
 need per-feature tracing, and tree features only through `tools/test_tree_feature_parity.py` (8,898 fixtures, all equal).

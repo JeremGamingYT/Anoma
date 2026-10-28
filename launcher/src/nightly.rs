@@ -4,12 +4,12 @@
 //!
 //! It never touches the release: it installs as its own version, `nightly-<date>-<commit>`, and plays
 //! in its own instance, "Nightly" (`instances/nightly/` in the game's home), so the player's worlds
-//! stay where they are and choosing the Horizon instance plays the release again. Its checksums
+//! stay where they are and choosing the Anoma instance plays the release again. Its checksums
 //! must be signed for the nightly channel (`signed::nightly_digest`); the release channel refuses
 //! them.
 use crate::backend::{self, Release, ASSET};
 use crate::instances::{self, Instance};
-use horizon_release_sign::NIGHTLY;
+use anoma_release_sign::NIGHTLY;
 
 /// The Nightly instance's id (its folder in `instances/`) and name.
 pub const INSTANCE: &str = "nightly";
@@ -77,14 +77,14 @@ pub fn update(latest: Option<Release>, installed: &[String]) -> Option<Release> 
 pub fn install(release: &Release, progress: impl Fn(f32)) -> Result<Instance, String> {
     let sha256 = crate::signed::nightly_digest(
         ASSET.unwrap_or_default(),
-        &horizon_release_sign::trusted_keys(),
+        &anoma_release_sign::trusted_keys(),
         backend::fetch_small,
     )?;
     let version = version_of(release);
     backend::install_as(release, &version, &sha256, progress)?;
     let instance = instance_on(&version)?;
     for old in backend::installed() {
-        if horizon_release_sign::is_nightly(&old) && old != version {
+        if anoma_release_sign::is_nightly(&old) && old != version {
             let _ = backend::remove(&old);
         }
     }
@@ -110,7 +110,7 @@ mod tests {
             name: name.into(),
             body: String::new(),
             date: date.into(),
-            asset: asset.then(|| ("https://example/horizon.zip".into(), 1)),
+            asset: asset.then(|| ("https://example/anoma.zip".into(), 1)),
             prerelease: true,
         }
     }
@@ -123,7 +123,7 @@ mod tests {
         assert_eq!(version_of(&untitled), "nightly-2026-10-29");
         // Never a release version: the release channel's checks and lists leave it out.
         assert!(!backend::is_game_tag(&version_of(&r)));
-        assert!(horizon_release_sign::is_nightly(&version_of(&r)));
+        assert!(anoma_release_sign::is_nightly(&version_of(&r)));
     }
 
     #[test]

@@ -128,6 +128,347 @@ dependencies = [
 ]
 
 [[package]]
+name = "anoma-assets"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "png",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-bench"
+version = "0.1.0"
+dependencies = [
+ "anoma-telemetry",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-bots"
+version = "0.1.0"
+dependencies = [
+ "anoma-protocol",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-client"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "anoma-assets",
+ "anoma-bench",
+ "anoma-client-core",
+ "anoma-client-input",
+ "anoma-command",
+ "anoma-core",
+ "anoma-dualsense",
+ "anoma-friends",
+ "anoma-hdr",
+ "anoma-items",
+ "anoma-mods",
+ "anoma-protocol",
+ "anoma-server-files",
+ "anoma-shader-api",
+ "anoma-shaders",
+ "anoma-telemetry",
+ "anoma-theme",
+ "anoma-threads",
+ "anoma-world",
+ "bytemuck",
+ "chrono",
+ "cpal",
+ "flate2",
+ "gilrs",
+ "glam",
+ "log",
+ "miniz_oxide 0.8.9",
+ "naga",
+ "png",
+ "pollster",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "symphonia",
+ "unicode-bidi",
+ "ureq",
+ "wgpu",
+ "winit",
+ "winresource",
+ "zip",
+]
+
+[[package]]
+name = "anoma-client-core"
+version = "0.1.0"
+dependencies = [
+ "anoma-world",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-client-input"
+version = "0.1.0"
+dependencies = [
+ "anoma-client-core",
+ "anoma-dualsense",
+ "anoma-theme",
+ "arboard",
+ "png",
+ "winit",
+]
+
+[[package]]
+name = "anoma-command"
+version = "0.1.0"
+dependencies = [
+ "anoma-client-core",
+ "anoma-protocol",
+ "anoma-world",
+]
+
+[[package]]
+name = "anoma-core"
+version = "0.1.0"
+dependencies = [
+ "libm",
+]
+
+[[package]]
+name = "anoma-dualsense"
+version = "0.1.0"
+dependencies = [
+ "cpal",
+ "hidapi",
+ "log",
+]
+
+[[package]]
+name = "anoma-friends"
+version = "0.1.0"
+dependencies = [
+ "chacha20poly1305",
+ "getrandom 0.3.4",
+ "hkdf",
+ "if-addrs",
+ "serde",
+ "serde_json",
+ "sha2",
+ "socket2 0.5.10",
+ "spake2",
+]
+
+[[package]]
+name = "anoma-hdr"
+version = "0.1.0"
+dependencies = [
+ "ash",
+ "wgpu",
+]
+
+[[package]]
+name = "anoma-items"
+version = "0.1.0"
+dependencies = [
+ "anoma-client-core",
+ "anoma-core",
+ "anoma-world",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-mod-sdk"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen 0.60.0",
+]
+
+[[package]]
+name = "anoma-mods"
+version = "0.1.0"
+dependencies = [
+ "anoma-shader-api",
+ "log",
+ "minisign-verify",
+ "serde",
+ "serde_json",
+ "sha2",
+ "toml",
+ "wasmparser",
+ "wasmtime",
+ "wit-component",
+ "wit-parser",
+ "zip",
+]
+
+[[package]]
+name = "anoma-mods-test-guest"
+version = "0.1.0"
+dependencies = [
+ "anoma-mod-sdk",
+]
+
+[[package]]
+name = "anoma-mods-test-ui-guest"
+version = "0.1.0"
+dependencies = [
+ "anoma-mod-sdk",
+]
+
+[[package]]
+name = "anoma-port-pack"
+version = "0.1.0"
+dependencies = [
+ "anoma-mods",
+ "serde",
+ "serde_json",
+ "sha1",
+ "toml",
+ "ureq",
+ "zip",
+]
+
+[[package]]
+name = "anoma-prepare"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "libc",
+ "regex",
+ "sha1",
+ "sha2",
+ "zip",
+]
+
+[[package]]
+name = "anoma-protocol"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "anoma-world",
+ "flate2",
+ "getrandom 0.3.4",
+ "ipconfig",
+ "serde_json",
+ "sha1",
+ "sha2",
+]
+
+[[package]]
+name = "anoma-relay"
+version = "0.1.0"
+dependencies = [
+ "anoma-friends",
+ "getrandom 0.3.4",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-release-sign"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "ring",
+]
+
+[[package]]
+name = "anoma-server"
+version = "0.1.0"
+dependencies = [
+ "anoma-bench",
+ "anoma-release-sign",
+ "anoma-server-files",
+ "chrono",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "toml",
+ "toml_edit",
+ "ureq",
+ "windows-sys 0.61.2",
+ "zip",
+]
+
+[[package]]
+name = "anoma-server-files"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "anoma-protocol",
+ "anoma-world",
+ "base64",
+ "log",
+ "ureq",
+]
+
+[[package]]
+name = "anoma-shader-api"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "naga",
+ "serde",
+ "serde_json",
+ "sha2",
+ "toml",
+ "zip",
+]
+
+[[package]]
+name = "anoma-shaders"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "naga",
+ "zip",
+]
+
+[[package]]
+name = "anoma-telemetry"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "ruzstd",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
+name = "anoma-theme"
+version = "0.1.0"
+
+[[package]]
+name = "anoma-threads"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "anoma-world"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "flate2",
+ "libm",
+ "lz4_flex",
+ "postcard",
+ "serde",
+ "serde_json",
+ "sha2",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -220,7 +561,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "beacons"
 version = "0.1.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -339,10 +680,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo-horizon-mod"
+name = "cargo-anoma-mod"
 version = "0.1.0"
 dependencies = [
- "horizon-mods",
+ "anoma-mods",
  "serde_json",
 ]
 
@@ -474,7 +815,7 @@ dependencies = [
 name = "coords-hud"
 version = "0.1.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -934,7 +1275,7 @@ checksum = "0b5343afd4a8365a643ac588dab4cf234a190c7f6c88c9f6dd6ffe00837661b7"
 name = "far-view"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -1033,7 +1374,7 @@ dependencies = [
 name = "fps-overlay"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -1336,347 +1677,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest",
-]
-
-[[package]]
-name = "horizon-assets"
-version = "0.1.0"
-dependencies = [
- "horizon-core",
- "png",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-bench"
-version = "0.1.0"
-dependencies = [
- "horizon-telemetry",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-bots"
-version = "0.1.0"
-dependencies = [
- "horizon-protocol",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-client"
-version = "0.1.0"
-dependencies = [
- "ab_glyph",
- "bytemuck",
- "chrono",
- "cpal",
- "flate2",
- "gilrs",
- "glam",
- "horizon-assets",
- "horizon-bench",
- "horizon-client-core",
- "horizon-client-input",
- "horizon-command",
- "horizon-core",
- "horizon-dualsense",
- "horizon-friends",
- "horizon-hdr",
- "horizon-items",
- "horizon-mods",
- "horizon-protocol",
- "horizon-server-files",
- "horizon-shader-api",
- "horizon-shaders",
- "horizon-telemetry",
- "horizon-theme",
- "horizon-threads",
- "horizon-world",
- "log",
- "miniz_oxide 0.8.9",
- "naga",
- "png",
- "pollster",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "sha1",
- "sha2",
- "symphonia",
- "unicode-bidi",
- "ureq",
- "wgpu",
- "winit",
- "winresource",
- "zip",
-]
-
-[[package]]
-name = "horizon-client-core"
-version = "0.1.0"
-dependencies = [
- "horizon-world",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-client-input"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "horizon-client-core",
- "horizon-dualsense",
- "horizon-theme",
- "png",
- "winit",
-]
-
-[[package]]
-name = "horizon-command"
-version = "0.1.0"
-dependencies = [
- "horizon-client-core",
- "horizon-protocol",
- "horizon-world",
-]
-
-[[package]]
-name = "horizon-core"
-version = "0.1.0"
-dependencies = [
- "libm",
-]
-
-[[package]]
-name = "horizon-dualsense"
-version = "0.1.0"
-dependencies = [
- "cpal",
- "hidapi",
- "log",
-]
-
-[[package]]
-name = "horizon-friends"
-version = "0.1.0"
-dependencies = [
- "chacha20poly1305",
- "getrandom 0.3.4",
- "hkdf",
- "if-addrs",
- "serde",
- "serde_json",
- "sha2",
- "socket2 0.5.10",
- "spake2",
-]
-
-[[package]]
-name = "horizon-hdr"
-version = "0.1.0"
-dependencies = [
- "ash",
- "wgpu",
-]
-
-[[package]]
-name = "horizon-items"
-version = "0.1.0"
-dependencies = [
- "horizon-client-core",
- "horizon-core",
- "horizon-world",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-mod-sdk"
-version = "0.1.0"
-dependencies = [
- "wit-bindgen 0.60.0",
-]
-
-[[package]]
-name = "horizon-mods"
-version = "0.1.0"
-dependencies = [
- "horizon-shader-api",
- "log",
- "minisign-verify",
- "serde",
- "serde_json",
- "sha2",
- "toml",
- "wasmparser",
- "wasmtime",
- "wit-component",
- "wit-parser",
- "zip",
-]
-
-[[package]]
-name = "horizon-mods-test-guest"
-version = "0.1.0"
-dependencies = [
- "horizon-mod-sdk",
-]
-
-[[package]]
-name = "horizon-mods-test-ui-guest"
-version = "0.1.0"
-dependencies = [
- "horizon-mod-sdk",
-]
-
-[[package]]
-name = "horizon-port-pack"
-version = "0.1.0"
-dependencies = [
- "horizon-mods",
- "serde",
- "serde_json",
- "sha1",
- "toml",
- "ureq",
- "zip",
-]
-
-[[package]]
-name = "horizon-prepare"
-version = "0.1.0"
-dependencies = [
- "crc32fast",
- "libc",
- "regex",
- "sha1",
- "sha2",
- "zip",
-]
-
-[[package]]
-name = "horizon-protocol"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "getrandom 0.3.4",
- "horizon-core",
- "horizon-world",
- "ipconfig",
- "serde_json",
- "sha1",
- "sha2",
-]
-
-[[package]]
-name = "horizon-relay"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "horizon-friends",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-release-sign"
-version = "0.1.0"
-dependencies = [
- "base64",
- "ring",
-]
-
-[[package]]
-name = "horizon-server"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "horizon-bench",
- "horizon-release-sign",
- "horizon-server-files",
- "libc",
- "serde",
- "serde_json",
- "sha2",
- "toml",
- "toml_edit",
- "ureq",
- "windows-sys 0.61.2",
- "zip",
-]
-
-[[package]]
-name = "horizon-server-files"
-version = "0.1.0"
-dependencies = [
- "base64",
- "horizon-core",
- "horizon-protocol",
- "horizon-world",
- "log",
- "ureq",
-]
-
-[[package]]
-name = "horizon-shader-api"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "naga",
- "serde",
- "serde_json",
- "sha2",
- "toml",
- "zip",
-]
-
-[[package]]
-name = "horizon-shaders"
-version = "0.1.0"
-dependencies = [
- "horizon-core",
- "naga",
- "zip",
-]
-
-[[package]]
-name = "horizon-telemetry"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "ruzstd",
- "serde",
- "serde_json",
- "ureq",
-]
-
-[[package]]
-name = "horizon-theme"
-version = "0.1.0"
-
-[[package]]
-name = "horizon-threads"
-version = "0.1.0"
-dependencies = [
- "libc",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "horizon-world"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "horizon-core",
- "libm",
- "lz4_flex",
- "postcard",
- "serde",
- "serde_json",
- "sha2",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -1991,7 +1991,7 @@ dependencies = [
 name = "keystrokes"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -2155,7 +2155,7 @@ dependencies = [
 name = "minimap"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -2900,7 +2900,7 @@ dependencies = [
 name = "predator-missile"
 version = "0.1.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -3033,7 +3033,7 @@ dependencies = [
 name = "recipes"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -4402,7 +4402,7 @@ dependencies = [
 name = "welcome"
 version = "0.1.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]
@@ -5230,7 +5230,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 name = "xtask"
 version = "0.1.0"
 dependencies = [
- "horizon-theme",
+ "anoma-theme",
 ]
 
 [[package]]
@@ -5375,7 +5375,7 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 name = "zoom"
 version = "1.0.0"
 dependencies = [
- "horizon-mod-sdk",
+ "anoma-mod-sdk",
 ]
 
 [[package]]

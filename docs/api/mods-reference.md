@@ -1,7 +1,7 @@
-<!-- Generated from crates/horizon-mod-sdk/wit/horizon.wit and the manifest's capabilities by crates/horizon-mods/tests/api_reference.rs; a test fails when this file is out of date. Update it with: HORIZON_WRITE_DOCS=1 cargo test -p horizon-mods --features pack --test api_reference -->
+<!-- Generated from crates/anoma-mod-sdk/wit/anoma.wit and the manifest's capabilities by crates/anoma-mods/tests/api_reference.rs; a test fails when this file is out of date. Update it with: ANOMA_WRITE_DOCS=1 cargo test -p anoma-mods --features pack --test api_reference -->
 # Mod API reference
 
-The contract between Horizon and its mods: the WIT package `horizon:mods@0.1.0`, every interface, type, function and hook in it, and the capabilities a manifest may list. The guide is [mods.md](../mods.md); stability and versions: [stability.md](stability.md). Manifest `api` lines this game serves: `0.1`, `0.2`, `0.3`.
+The contract between Anoma and its mods: the WIT package `anoma:mods@0.1.0`, every interface, type, function and hook in it, and the capabilities a manifest may list. The guide is [mods.md](../mods.md); stability and versions: [stability.md](stability.md). Manifest `api` lines this game serves: `0.1`, `0.2`, `0.3`.
 
 ## Capabilities
 
@@ -20,30 +20,30 @@ The contract between Horizon and its mods: the WIT package `horizon:mods@0.1.0`,
 | `world` | [`world`](#world) | read and change the world's blocks |
 | `recipes` | [`recipes`](#recipes) | read the game's recipes and items and which recipes you know, place recipes in your crafting grid and, in creative mode, give you items |
 
-## World `horizon-mod`
+## World `anoma-mod`
 
 A client mod: runs in the player's game.
 
 - Imports (what the game offers): `log`, `game`, `chat`, `hud`, `storage`, `command`
 - Exports (what the mod provides): `events`
 
-## World `horizon-server-mod`
+## World `anoma-server-mod`
 
 A server mod (manifest `side = "server"`, `api = "0.3"`, experimental): runs where the world is simulated, on the dedicated server, a LAN host and single player's own server.
 
 - Imports (what the game offers): `log`, `storage`, `players`, `world`
 - Exports (what the mod provides): `server-events`
 
-## World `horizon-ui-mod`
+## World `anoma-ui-mod`
 
-A mod with widgets (capability `ui`): the SDK builds every mod against this world. Mods built for `horizon-mod` alone (no `ui-events` export) still load and simply hear nothing of their widgets.
+A mod with widgets (capability `ui`): the SDK builds every mod against this world. Mods built for `anoma-mod` alone (no `ui-events` export) still load and simply hear nothing of their widgets.
 
 - Imports (what the game offers): `ui`, `render`, `input`, `recipes`, `browser`, `log`, `game`, `chat`, `hud`, `storage`, `command`
 - Exports (what the mod provides): `ui-events`, `events`
 
 ## World `ui-host`
 
-The game's side of `horizon-ui-mod` beyond `horizon-mod`.
+The game's side of `anoma-ui-mod` beyond `anoma-mod`.
 
 - Imports (what the game offers): `ui`
 - Exports (what the mod provides): `ui-events`
@@ -185,7 +185,7 @@ Capability `command`: vanilla commands run as the player, with the player's perm
 | Function | Signature | What it does |
 | --- | --- | --- |
 | `run` | `func(line: string)` | `line` without its slash; its feedback goes to the chat as if typed. |
-| `run-quiet` | `func(lines: list<string>)` | `lines` (each without its slash, at most 256 a call) as `run` does, but with nothing in the chat: no feedback and no failure. In single player and on Horizon's servers, each runs exactly as the player typing it would (the same rights), in order, 64 a tick, and the server logs one line a batch; one that carries a chat message (`say`, `msg`) is refused. On any other server they go as chat commands, and there their feedback shows: a mod running many should say so. |
+| `run-quiet` | `func(lines: list<string>)` | `lines` (each without its slash, at most 256 a call) as `run` does, but with nothing in the chat: no feedback and no failure. In single player and on Anoma's servers, each runs exactly as the player typing it would (the same rights), in order, 64 a tick, and the server logs one line a batch; one that carries a chat message (`say`, `msg`) is refused. On any other server they go as chat commands, and there their feedback shows: a mod running many should say so. |
 
 ## `ui`
 
@@ -482,7 +482,7 @@ What the game calls. Only the hooks `init` asks for are ever called.
 
 Access: capability `recipes`.
 
-Capability `recipes` (experimental): the recipes and items the game knows, for recipe viewers. In single player and on Horizon's servers they are the world's; on any other server they are vanilla 26.3's (a client is sent no others), while `known` follows that server's book.
+Capability `recipes` (experimental): the recipes and items the game knows, for recipe viewers. In single player and on Anoma's servers they are the world's; on any other server they are vanilla 26.3's (a client is sent no others), while `known` follows that server's book.
 
 ### record `stack`
 

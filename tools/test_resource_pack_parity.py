@@ -9,8 +9,8 @@ sources) and selects them over the prepared vanilla resources. The Java oracle
 and MultiPackResourceManager and asks what each reload listener reads: which
 pack a file comes from, translations (ClientLanguage), sound events
 (SoundManager.prepare), font providers (FontManager) and atlas sources
-(SpriteSourceList). examples/probe/pack_resources_fixture builds Horizon's resource
-root for the same selection (packs::build_overlay) and reads it with Horizon's
+(SpriteSourceList). examples/probe/pack_resources_fixture builds Anoma's resource
+root for the same selection (packs::build_overlay) and reads it with Anoma's
 loaders. Every answer must agree.
 """
 import json
@@ -43,38 +43,38 @@ def packs(folder):
         "assets/minecraft/textures/block/granite.png": b"alpha granite",
         "alpha_now/assets/minecraft/textures/block/dirt.png": b"alpha overlay dirt",
         "alpha_old/assets/minecraft/textures/block/sand.png": b"old overlay sand",
-        "assets/minecraft/lang/en_us.json": {"block.minecraft.stone": "Alpha Stone", "horizon.k1": "A1",
-                                             "horizon.k2": "A2"},
+        "assets/minecraft/lang/en_us.json": {"block.minecraft.stone": "Alpha Stone", "anoma.k1": "A1",
+                                             "anoma.k2": "A2"},
         "assets/minecraft/sounds.json": {
-            "horizon.test": {"subtitle": "subtitles.horizon.a", "sounds": ["horizon/a1"]},
-            "block.stone.break": {"sounds": [{"name": "horizon/a2", "weight": 2}]},
-            "horizon.ref": {"sounds": [{"name": "horizon.test", "type": "event"}]}},
-        "assets/minecraft/sounds/horizon/a1.ogg": b"a1",
-        "assets/minecraft/sounds/horizon/a2.ogg": b"a2",
+            "anoma.test": {"subtitle": "subtitles.anoma.a", "sounds": ["anoma/a1"]},
+            "block.stone.break": {"sounds": [{"name": "anoma/a2", "weight": 2}]},
+            "anoma.ref": {"sounds": [{"name": "anoma.test", "type": "event"}]}},
+        "assets/minecraft/sounds/anoma/a1.ogg": b"a1",
+        "assets/minecraft/sounds/anoma/a2.ogg": b"a2",
         "assets/minecraft/font/default.json": {"providers": [{"type": "space", "advances": {" ": 9}}]},
-        "assets/minecraft/atlases/blocks.json": {"sources": [{"type": "single", "resource": "horizon:block/a"}]},
-        "assets/horizon/lang/en_us.json": {"horizon.ns": "Alpha namespace"},
+        "assets/minecraft/atlases/blocks.json": {"sources": [{"type": "single", "resource": "anoma:block/a"}]},
+        "assets/anoma/lang/en_us.json": {"anoma.ns": "Alpha namespace"},
     })
     beta = folder / "beta-src"
     write(beta, {
         "pack.mcmeta": {"pack": {"description": "beta", **FORMAT},
                         "filter": {"block": [{"namespace": "minecraft", "path": "textures/block/stone\\.png"}]}},
         "assets/minecraft/textures/block/granite.png": b"beta granite",
-        "assets/minecraft/lang/en_us.json": {"horizon.k1": "B1"},
+        "assets/minecraft/lang/en_us.json": {"anoma.k1": "B1"},
         "assets/minecraft/sounds.json": {
-            "horizon.test": {"replace": True, "subtitle": "subtitles.horizon.b",
-                             "sounds": ["horizon/b1", {"name": "horizon/a1", "weight": 3}]},
-            "block.stone.break": {"sounds": ["horizon/missing"]}},
-        "assets/minecraft/sounds/horizon/b1.ogg": b"b1",
+            "anoma.test": {"replace": True, "subtitle": "subtitles.anoma.b",
+                             "sounds": ["anoma/b1", {"name": "anoma/a1", "weight": 3}]},
+            "block.stone.break": {"sounds": ["anoma/missing"]}},
+        "assets/minecraft/sounds/anoma/b1.ogg": b"b1",
         "assets/minecraft/font/default.json": {"providers": [{"type": "space", "advances": {" ": 4}},
                                                              {"type": "space", "advances": {" ": 5}}]},
-        "assets/minecraft/atlases/blocks.json": {"sources": [{"type": "single", "resource": "horizon:block/b"}]},
+        "assets/minecraft/atlases/blocks.json": {"sources": [{"type": "single", "resource": "anoma:block/b"}]},
     })
     # Gamma: a sounds.json Gson rejects (a bad entry) is skipped whole.
     write(folder / "Gamma", {
         "pack.mcmeta": {"pack": {"description": "gamma", **FORMAT}},
-        "assets/minecraft/sounds.json": {"horizon.test": {"sounds": ["horizon/a1"]}, "bad": 3},
-        "assets/minecraft/lang/en_us.json": {"horizon.k2": "G2"},
+        "assets/minecraft/sounds.json": {"anoma.test": {"sounds": ["anoma/a1"]}, "bad": 3},
+        "assets/minecraft/lang/en_us.json": {"anoma.k2": "G2"},
     })
     with zipfile.ZipFile(folder / "Beta.zip", "w") as z:
         for path in sorted(beta.rglob("*")):
@@ -91,12 +91,12 @@ QUERIES = [
     "file minecraft:textures/block/oak_planks.png",
     "lang block.minecraft.stone",
     "lang block.minecraft.dirt",
-    "lang horizon.k1",
-    "lang horizon.k2",
-    "lang horizon.ns",
+    "lang anoma.k1",
+    "lang anoma.k2",
+    "lang anoma.ns",
     "lang menu.singleplayer",
-    "sound horizon.test",
-    "sound horizon.ref",
+    "sound anoma.test",
+    "sound anoma.ref",
     "sound block.stone.break",
     "sound block.stone.place",
     "font minecraft:default",
@@ -127,9 +127,9 @@ def main():
         harness.differential(f"resource-pack-parity-{index}", "VanillaPackResourcesOracle",
                                     "pack_resources_fixture", make,
                                     "Pack discovery, overlays, filters and the resource stacks vanilla merges.",
-                                    sources=[lab.ROOT / "crates/horizon-client/src/packs.rs",
-                                             lab.ROOT / "crates/horizon-client/src/sound_events.rs",
-                                             lab.ROOT / "crates/horizon-client-core/src/lang.rs"])
+                                    sources=[lab.ROOT / "crates/anoma-client/src/packs.rs",
+                                             lab.ROOT / "crates/anoma-client/src/sound_events.rs",
+                                             lab.ROOT / "crates/anoma-client-core/src/lang.rs"])
         total += len(QUERIES)
     print(f"{total} resource pack queries match the pinned client over {len(SELECTIONS)} selections")
 

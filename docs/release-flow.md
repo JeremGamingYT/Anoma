@@ -1,7 +1,7 @@
 # Release flow
 
 How a change gets from a pull request to players: the checks a pull request passes, how it merges, and the
-automatic releases that follow. Releases are automatic and frequent so the latest Horizon is always playable.
+automatic releases that follow. Releases are automatic and frequent so the latest Anoma is always playable.
 There is one channel ([One channel](#one-channel)): each release is published as the release and GitHub's *latest*
 once its smoke test passed and no `release-blocker` is open, and launchers and servers install it at once.
 
@@ -13,7 +13,7 @@ reopened; labels never start it):
 | Job | Runs on | What | Time |
 | --- | --- | --- | --- |
 | `verify` | GitHub `ubuntu-latest` | Public-tree check, Python tests, rustfmt, clippy with warnings denied, Rust tests. Dependencies and the workspace build come from a cache saved by main's runs | ~4 min cold, less warm |
-| `parity / parity` | A runner with the label `horizon-game`: the Mac mini's and playhorizon's (below) | Only for a change to a harness, an oracle, a probe or the runner (or the `run-parity` label): the vanilla harnesses the change can affect (`tools/parity.py --changed <base>`). Other pull requests skip it: [parity-main](#parity-on-main) checks them on main | seconds when nothing is affected; minutes per affected harness |
+| `parity / parity` | A runner with the label `anoma-game`: the Mac mini's and playanoma's (below) | Only for a change to a harness, an oracle, a probe or the runner (or the `run-parity` label): the vanilla harnesses the change can affect (`tools/parity.py --changed <base>`). Other pull requests skip it: [parity-main](#parity-on-main) checks them on main | seconds when nothing is affected; minutes per affected harness |
 
 Pushes to main run `verify` only; the nightly audit covers main's harnesses.
 
@@ -29,12 +29,12 @@ repository, `run-parity.yml` for a fork's pull request a maintainer labels `run-
 
 A pull request every harness reaches (a crate split moves files every probe links: #2160 ran all 352 harnesses, 71
 minutes on a Mac mini runner, while five other pull requests' jobs queued behind it) carries the `full-parity` label:
-its job runs on playhorizon's runner only (4 harnesses at a time), and waits for it while that runner is busy
+its job runs on playanoma's runner only (4 harnesses at a time), and waits for it while that runner is busy
 instead of taking the Mac mini's. Labels don't start `checks`: add it when opening the pull request
 (`gh pr create --label full-parity`), or before the next push.
 
-Horizon never downloads the game, so harnesses that compare with vanilla run only where the maintainer's own
-copy is: the Mac mini and playhorizon (below). Their runners run as the maintainer's account and keep their checkout
+Anoma never downloads the game, so harnesses that compare with vanilla run only where the maintainer's own
+copy is: the Mac mini and playanoma (below). Their runners run as the maintainer's account and keep their checkout
 between runs (`clean: false`), so the probes build incrementally into `.local/parity-target` and earlier passes
 stand.
 
@@ -48,15 +48,15 @@ alone, with a warning. The check is still reported on the head.
    (Homebrew and `java_home` on the Mac; on Linux what `linux-runner.sh` pinned, else nixpkgs), and sccache when
    the machine has it.
 2. `tools/ci/vanilla-data.sh` links `.local/` to the runner's copy of the vanilla data, cloned once from
-   `~/code/horizon-parity/shared-local` into `~/.actions-runners/horizon/_work/horizon/shared-local`, and
-   prepares `.local/horizon-client` with the pull request's own `horizon-prepare` once per preparer version
-   (its sources, the exporters in `mods/horizon/src/test/java` and `research-lock.json`). The game's sounds, which
+   `~/code/anoma-parity/shared-local` into `~/.actions-runners/anoma/_work/anoma/shared-local`, and
+   prepares `.local/anoma-client` with the pull request's own `anoma-prepare` once per preparer version
+   (its sources, the exporters in `mods/anoma/src/test/java` and `research-lock.json`). The game's sounds, which
    depend only on the Minecraft version, are kept once in `shared-local/sounds/<version>/` (copied from a folder
-   `horizon-prepare sounds` made from the maintainer's own game; the Mac mini has no official launcher of its own)
+   `anoma-prepare sounds` made from the maintainer's own game; the Mac mini has no official launcher of its own)
    and cloned into each preparation (not linked: vanilla's packs refuse symbolic links), for the audio harnesses.
-   `tools/prepare_output.py check` then compares what was prepared with `crates/horizon-prepare/output-versions.txt`:
+   `tools/prepare_output.py check` then compares what was prepared with `crates/anoma-prepare/output-versions.txt`:
    launchers keep a player's prepared resources across releases whose preparer declares the same `OUTPUT_VERSION`
-   (`crates/horizon-prepare/src/lib.rs`), so a change to the prepared files fails here until it bumps the number
+   (`crates/anoma-prepare/src/lib.rs`), so a change to the prepared files fails here until it bumps the number
    and appends the new digest (the error gives both lines).
 3. `tools/parity.py --changed <base sha>` picks the harnesses whose traced dependencies (their script, Python
    modules, Java oracles and every Rust source their probes compile) changed since the merge base, plus any
@@ -66,10 +66,10 @@ alone, with a warning. The check is still reported on the head.
 Failed harnesses' logs are uploaded as the `parity-logs` artifact.
 
 **Platform-specific harnesses.** A harness listed under `linux_only` in `tools/parity_hosts.json` gives
-different results on macOS for a reason that is not a Horizon bug (the reason is printed). `parity.py` skips it on
+different results on macOS for a reason that is not a Anoma bug (the reason is printed). `parity.py` skips it on
 other platforms unless it is named on the command line. Today it holds only `save_roundtrip` (it needs `vscreen`):
 `options`, `chunk_generation`, `world_border_render` and `mob_ai`, which once differed on macOS through the
-platform's libm, pass on the Mac mini since `horizon_core::jmath` computes what HotSpot computes (checked
+platform's libm, pass on the Mac mini since `anoma_core::jmath` computes what HotSpot computes (checked
 2026-10-14).
 
 **Pull requests from forks** never run code on the Mac mini by themselves. A maintainer who has read the change
@@ -77,44 +77,44 @@ adds the `run-parity` label: that runs the job once, on the commit the pull requ
 after new pushes, remove the label and add it again.
 
 **Two runners.** The Mac mini has two runners for this repository, `ludovics-mac-mini`
-(`~/.actions-runners/horizon`, `CARGO_BUILD_JOBS=10`) and `ludovics-mac-mini-2` (`~/.actions-runners/horizon-2`,
+(`~/.actions-runners/anoma`, `CARGO_BUILD_JOBS=10`) and `ludovics-mac-mini-2` (`~/.actions-runners/anoma-2`,
 `CARGO_BUILD_JOBS=6`), with the same labels, so the 30-minute nightly audit or a long parity job never holds a
 release's macOS build back. Each keeps its own checkout, `target/` and Rust install; the second's
-`_work/horizon/shared-local` links to the first's, so they share the vanilla data, the preparations (one at a
+`_work/anoma/shared-local` links to the first's, so they share the vanilla data, the preparations (one at a
 time, under a lock) and the parity passes and slots.
 
 **The desktop's runner (retired).** On 2026-10-26 the maintainer asked that CI stop using his desktop: its services are
-stopped and `ludodesktop-horizon` has no label a job asks for (only `self-hosted`, `Linux`, `X64`), so nothing waits for
+stopped and `ludodesktop-anoma` has no label a job asks for (only `self-hosted`, `Linux`, `X64`), so nothing waits for
 it. What follows describes it as it ran. It ran on the maintainer's Linux desktop while nobody used it: its
 screen locked, or untouched for 15 minutes (his rule, 2026-10-26). `tools/ci/linux-runner.sh install`, run there as
-him, registers it and installs two systemd user services: `horizon-runner` (the runner, in
-`~/.actions-runners/horizon`, nice 19, in `horizon-ci.slice` with CPU and I/O weight 20, half the threads (on all of
+him, registers it and installs two systemd user services: `anoma-runner` (the runner, in
+`~/.actions-runners/anoma`, nice 19, in `anoma-ci.slice` with CPU and I/O weight 20, half the threads (on all of
 them the CPU package reached 92–96 °C) and memory capped at two thirds of the RAM; `CARGO_BUILD_JOBS` and the harness slots at 8, after the machine froze under ~7 cold cargo
 builds on 2026-10-14; its own Rust install; the JDK, sccache and the build libraries from nixpkgs; its own
-`vscreen` so no game it starts reaches his screen) and `horizon-runner-pause` (`tools/ci/runner_pause.py`), the
+`vscreen` so no game it starts reaches his screen) and `anoma-runner-pause` (`tools/ci/runner_pause.py`), the
 only thing that starts the runner. The watcher stops it at once on keyboard, mouse or gamepad input (read from
 `/dev/input`: only whether bytes came, never what), while an unlocked session has had input in the last 15 minutes,
 while the CPU package is at 90 °C or more, while a game runs (Steam, gamescope, Wine, Proton or Minecraft
 processes, fleet-load's own detection, or a process outside the CI slice using the GPU at 50 % or more), or while
-`~/.actions-runners/horizon/pause` exists, and starts it again 5 minutes after the last such sign. A job already
+`~/.actions-runners/anoma/pause` exists, and starts it again 5 minutes after the last such sign. A job already
 under way is throttled to 2 threads at the lowest weight and the runner stops after it: freezing the job would make
 GitHub drop it as lost and the harnesses time out. Old pull requests' `runner-env.sh` know only the Mac: the
-runner's `.env` and `.path` give their jobs Python, the JDK and the vanilla data (`HORIZON_SHARED_SOURCE`) all the
+runner's `.env` and `.path` give their jobs Python, the JDK and the vanilla data (`ANOMA_SHARED_SOURCE`) all the
 same. The nightly audit and parity-main stay on the Mac mini's runners: the audit compares with the previous night,
 so it stays on one platform, and a parity-main job slowed down on the desktop because he came back could time out,
 and its failures bisect and comment on merges.
 
-**playhorizon's runner.** `playhorizon-horizon` runs on a server a hosting partner lends the project (Ubuntu, 8
+**playanoma's runner.** `playanoma-anoma` runs on a server a hosting partner lends the project (Ubuntu, 8
 AMD EPYC threads, 30 GB, in Detroit; reachable only through the maintainer's tailnet). Nobody sits at it, so the
 watcher never pauses it except by hand. It gets half the machine: `RUNNER_MEMORY=24`, `CARGO_BUILD_JOBS` and the
-harness slots at 4, and a drop-in (`~/.config/systemd/user/horizon-runner.service.d/cpus.conf`) that starts it under
+harness slots at 4, and a drop-in (`~/.config/systemd/user/anoma-runner.service.d/cpus.conf`) that starts it under
 `taskset -c 4-7` (the user slice can't set `AllowedCPUs`: systemd doesn't delegate the cpuset controller to it).
 Agents' `tools/remote.sh` runs and benchmarks share CPUs 0-3, so they never slow a pull request's job.
 Without Nix, `linux-runner.sh` takes the build libraries, the JDK, sccache, Xvfb and Mesa's software Vulkan
 (lavapipe; there is no GPU) from apt, and Python 3.13 from uv. The partner can reach the machine, so gh is not
 logged in there: the registration token comes from another machine (`RUNNER_TOKEN`), and no job with secrets may
-run there (parity has none). It is also a parity host (`playhorizon` in `tools/parity_hosts.json`, 3 jobs on CPUs 0-3). Since
-2026-10-26 it has the `horizon-game` label: pull requests' parity jobs run there or on the Mac mini, and `full-parity`
+run there (parity has none). It is also a parity host (`playanoma` in `tools/parity_hosts.json`, 3 jobs on CPUs 0-3). Since
+2026-10-26 it has the `anoma-game` label: pull requests' parity jobs run there or on the Mac mini, and `full-parity`
 ones only there.
 
 ## Merging
@@ -124,7 +124,7 @@ requires `verify` for everyone, and Ludovic's review for the files `.github/CODE
 and ships releases). Branches don't have to be up to date with main: main's own `checks` run catches the rare
 semantic conflict.
 
-**Who merges.** The Horizon Team (GitHub team `horizon-team`: kacpherek, levzzz5154, rdbtCVS, Online5277) and
+**Who merges.** The Anoma Team (GitHub team `anoma-team`: kacpherek, levzzz5154, rdbtCVS, Online5277) and
 Ludovic. The orchestrator's agents prove only the risky pull requests (below), so a contributor's ordinary pull
 request doesn't wait for them.
 
@@ -144,7 +144,7 @@ paths, `lan_e2e`, a screenshot for anything visible) before it merges. Risky mea
 
 - it changes what is saved or loaded (`save.rs`, `entity_nbt.rs`, `block_entity_nbt.rs`, `region.rs`, `datafix/`):
   a bug there damages players' worlds;
-- the network or the server thread: `horizon-protocol`, `net.rs`, `remote*.rs`, `lan/`, `lan*.rs`,
+- the network or the server thread: `anoma-protocol`, `net.rs`, `remote*.rs`, `lan/`, `lan*.rs`,
   `integrated.rs`, `levels.rs`, `dedicated*`;
 - world generation (`worldgen/`): seeds must keep generating the same terrain;
 - the launcher's installs and updates, or the mod runtime;
@@ -156,7 +156,7 @@ Unsure? Add `needs-proof`: it costs a few hours, a broken release costs more.
 `parity` becomes required once it has run green on pull requests for a while (a week without a false failure):
 
 ```sh
-gh api -X POST repos/horizon-rust/horizon/branches/main/protection/required_status_checks/contexts -f 'contexts[]=parity / parity'
+gh api -X POST repos/JeremGamingYT/Anoma/branches/main/protection/required_status_checks/contexts -f 'contexts[]=parity / parity'
 ```
 
 A skipped `parity` (a fork's pull request without the label) counts as passed, so requiring it never blocks a
@@ -182,7 +182,7 @@ which runs them on main a batch of merges at a time, on the Mac mini's runner:
   parity-main run finishes. A forced release (`force=true`) doesn't wait for parity-main.
 
 A pull request still runs its own parity job when it changes a harness script, an oracle
-(`mods/horizon/src/test/`), a probe (`crates/*/examples/`, `game/*_fixture.rs`, `game/*_harness.rs`), the runner
+(`mods/anoma/src/test/`), a probe (`crates/*/examples/`, `game/*_fixture.rs`, `game/*_harness.rs`), the runner
 (`tools/parity*.py`, `tools/lab.py`, `tools/parity_hosts.json`, `parity*.yml`), or carries the `run-parity` label
 (`run-parity.yml` runs it when the label is added).
 
@@ -219,8 +219,8 @@ flowchart LR
 commits) since the last **published** game release:
 
 - A pull request counts when it changed what players run: `crates/` (not `examples/`, `tests/`, `benches/`),
-  `xtask/`, `packaging/`, `Cargo.toml`, `Cargo.lock`, `research-lock.json`, or an exporter `horizon-prepare`
-  compiles (the `mods/horizon/src/test/java/dev/horizonlab/parity/*.java` files its sources name). Markdown never
+  `xtask/`, `packaging/`, `Cargo.toml`, `Cargo.lock`, `research-lock.json`, or an exporter `anoma-prepare`
+  compiles (the `mods/anoma/src/test/java/dev/anomalab/parity/*.java` files its sources name). Markdown never
   counts.
 - It releases in batches, so players get a few releases a day rather than one per merge: once 5 pull requests count
   and the newest of them merged at least 5 minutes ago (a wave of merges becomes one release), or once the oldest has
@@ -241,7 +241,7 @@ How releases are numbered, and how installs from before 0.2 reach it: [versionin
   the patch after the newest release tagged on that line (`v0.2.0` first). A `feature` label doesn't change the line:
   only that file does, by pull request.
 - Without the file (every release before 0.2), `vYYYY.MM.DD`, then `.01`, `.02`… the same UTC day.
-- Every reader (`release_train.py`, the launcher, `horizon-server update`, the website) ranks
+- Every reader (`release_train.py`, the launcher, `anoma-server update`, the website) ranks
   every `vX.Y.Z` tag above every dated one.
 
 ### Labels
@@ -252,7 +252,7 @@ How releases are numbered, and how installs from before 0.2 reach it: [versionin
 | `release-now` | Releases as soon as main's checks pass, without waiting for merges to settle |
 | `skip-release` | Doesn't trigger a release and isn't listed in the notes |
 | `run-parity` | Runs the parity job once on a fork's pull request |
-| `full-parity` | Runs the pull request's parity job on playhorizon's runner only (a change every harness reaches) |
+| `full-parity` | Runs the pull request's parity job on playanoma's runner only (a change every harness reaches) |
 | `parity-regression` | Opened by the nightly audit for a harness that fails on main |
 | `release-blocker` | On an issue: no game release is published while it is open ([One channel](#one-channel)) |
 
@@ -263,12 +263,12 @@ the notes.
 
 | Archive | Runs on | Checks |
 | --- | --- | --- |
-| `horizon-linux-x86_64.tar.gz` | GitHub `ubuntu-22.04` (an older glibc, so it runs on any recent distribution) | the standard loader and libraries only (`tools/check_imports.py`) |
-| `horizon-server-linux-x86_64.tar.gz` | the same Linux job, after the client archive: `horizon-server`, `horizon-prepare` and the game built with `--no-default-features` as `horizon-engine` (docs/server.md) | as above, and neither `libasound.so.2` nor `libudev.so.1` (`tools/check_imports.py --server`) |
-| `horizon-windows-x64.zip` | GitHub `windows-latest`, C runtime linked in | system DLLs only (`tools/check_imports.py`) |
-| `horizon-macos-arm64.zip` | The Mac mini's runner (`vars.MAC_RUNNER=macos-latest` sends it to GitHub) | system libraries only (`otool -L`); a 1500-frame offscreen run of a new world (about 12 s; 300 frames end before the world has loaded) with resources prepared from the runner's own Minecraft (`--offscreen --world smoke --frames 1500 --smoke-report`: frames drawn, chunks generated and meshed, a player, no error) |
+| `anoma-linux-x86_64.tar.gz` | GitHub `ubuntu-22.04` (an older glibc, so it runs on any recent distribution) | the standard loader and libraries only (`tools/check_imports.py`) |
+| `anoma-server-linux-x86_64.tar.gz` | the same Linux job, after the client archive: `anoma-server`, `anoma-prepare` and the game built with `--no-default-features` as `anoma-engine` (docs/server.md) | as above, and neither `libasound.so.2` nor `libudev.so.1` (`tools/check_imports.py --server`) |
+| `anoma-windows-x64.zip` | GitHub `windows-latest`, C runtime linked in | system DLLs only (`tools/check_imports.py`) |
+| `anoma-macos-arm64.zip` | The Mac mini's runner (`vars.MAC_RUNNER=macos-latest` sends it to GitHub) | system libraries only (`otool -L`); a 1500-frame offscreen run of a new world (about 12 s; 300 frames end before the world has loaded) with resources prepared from the runner's own Minecraft (`--offscreen --world smoke --frames 1500 --smoke-report`: frames drawn, chunks generated and meshed, a player, no error) |
 
-Each builds `horizon-client`, `horizon-ctl` and `horizon-prepare` in release mode, checks all three exist, starts
+Each builds `anoma-client`, `anoma-ctl` and `anoma-prepare` in release mode, checks all three exist, starts
 each one (`--help`, `--version`), packages the folder with `cargo run -p xtask -- package` and archives it. The
 GitHub jobs keep their Cargo caches (`Swatinem/rust-cache`); the Mac mini keeps its `target/`. Only the Mac
 runs the game: GitHub's runners have neither a GPU worth the name nor the game files.
@@ -277,7 +277,7 @@ runs the game: GitHub's runners have neither a GPU worth the name nor the game f
 
 `tools/release_train.py notes` writes them from the same pull requests:
 
-- the title, `Horizon 0.2.3: <the first pull request titles>` (before 0.2, `Horizon 2026.10.15.01: …`, a day's later releases counting .01, .02…, two digits so GitHub's releases page, which sorts them as text, kept them in order), features first, newest first;
+- the title, `Anoma 0.2.3: <the first pull request titles>` (before 0.2, `Anoma 2026.10.15.01: …`, a day's later releases counting .01, .02…, two digits so GitHub's releases page, which sorts them as text, kept them in order), features first, newest first;
 - a line's first release (`X.Y.0`) opens with a paragraph that says so; 0.2.0's says releases are numbered from now
   on and how a server that says it is up to date takes it;
 - `### New` (label `feature`) and `### Fixed` (the rest), one line per pull request: its title, its number, the
@@ -295,7 +295,7 @@ Since 2026-10-23 there is one release channel, and it is every launcher's defaul
 decision, revising 2026-10-23's) players may also turn on [Nightly](#nightly-channel), an opt-in pre-release of main
 plus pull requests the trusted reviewers picked, not all reviewed yet; nothing about releases changes for anyone who
 doesn't. Every game release is published
-as the release, never a pre-release, and marked GitHub's *latest*: the launcher, `horizon-server update` and `install.sh` take it at once. Because nothing
+as the release, never a pre-release, and marked GitHub's *latest*: the launcher, `anoma-server update` and `install.sh` take it at once. Because nothing
 promotes it later, the checks that used to gate a promotion run in the release itself, and the publish job
 (`tools/release_train.py gate`) publishes nothing unless both pass:
 
@@ -324,7 +324,7 @@ off, every release that is not a pre-release, which is now every new one.
 ### Signed checksums
 
 Every game and launcher release carries `SHA256SUMS` (the archives' SHA-256, `sha256sum`'s format) and
-`SHA256SUMS.sig`: one base64 Ed25519 signature per line over `horizon release <tag>\n` followed by SHA256SUMS,
+`SHA256SUMS.sig`: one base64 Ed25519 signature per line over `anoma release <tag>\n` followed by SHA256SUMS,
 so a signed list can't be reused under another tag.
 
 - A `sign` job of its own makes them: `tools/ci/sign_release.sh` runs the runner's `sha256sum` and OpenSSL and
@@ -333,18 +333,18 @@ so a signed list can't be reused under another tag.
   runs, which sign with a throwaway key). No code from the repository runs beside the key, so no pull request
   can read it by changing what a build compiles; the key is in no file, no log and no password vault, and nobody
   needs to read it.
-- The publish job then checks the signature the way launchers do (`horizon-release-sign verify --publishing`,
-  crates/horizon-release-sign), against the public keys built in from
-  `crates/horizon-release-sign/release-keys.txt`. While that file lists no key, releases go out with SHA256SUMS
+- The publish job then checks the signature the way launchers do (`anoma-release-sign verify --publishing`,
+  crates/anoma-release-sign), against the public keys built in from
+  `crates/anoma-release-sign/release-keys.txt`. While that file lists no key, releases go out with SHA256SUMS
   alone and a warning (today's releases keep working). Once it lists one, a missing secret or a key it doesn't
   list fails the release before anything is published, instead of publishing something launchers would refuse.
-- Making the key: `tools/ci/new_release_key.sh` pipes a new key from `horizon-release-sign keygen` straight into
+- Making the key: `tools/ci/new_release_key.sh` pipes a new key from `anoma-release-sign keygen` straight into
   `gh secret set RELEASE_SIGNING_KEY --env release` and prints only the public key, which then goes into
   release-keys.txt by pull request.
 
-**Releases from before signing.** The launcher and `horizon-server update` install only signed releases, with
+**Releases from before signing.** The launcher and `anoma-server update` install only signed releases, with
 one exception, so a player or a server can still go back to an older version: every release published before
-signing began has its archives' SHA-256 pinned in `crates/horizon-release-sign/legacy-releases.txt`, built into
+signing began has its archives' SHA-256 pinned in `crates/anoma-release-sign/legacy-releases.txt`, built into
 both. Those releases install only with exactly those files, whatever GitHub serves for them later. The file was
 written once by `tools/ci/legacy_releases.py` from the SHA-256s GitHub computed at upload; it lists no signed
 release and never changes again (`--check` says whether it is complete).
@@ -403,7 +403,7 @@ label the revert `release-now`, and a fixed release is out as soon as main's che
 ## Launcher releases
 
 `.github/workflows/launcher.yml` releases the launcher the same way. It starts on a push to main that changes
-`launcher/`, `crates/horizon-prepare/` or `crates/horizon-theme/` (what the launcher builds in), every hour at :47,
+`launcher/`, `crates/anoma-prepare/` or `crates/anoma-theme/` (what the launcher builds in), every hour at :47,
 and by hand; pushes to `launcher` and `launcher-*` branches only build.
 
 - `tools/release_train.py decide --kind launcher` counts the pull requests merged since the last published
@@ -413,8 +413,8 @@ and by hand; pushes to `launcher` and `launcher-*` branches only build.
   patches separately). Without `.github/release-line.txt`, `launcher-vX.Y.Z`: the patch after the last launcher tag,
   or the next minor (`X.Y+1.0`) when one of those pull requests is labelled `feature`. `launcher-v0.2.0` was taken
   long before 0.2, hence the new prefix.
-- No version-bump commits: the build gets the version in `HORIZON_LAUNCHER_VERSION` and the tag in
-  `HORIZON_LAUNCHER_TAG`, which `launcher/src/backend.rs` reads with `option_env!` (falling back to `Cargo.toml`'s),
+- No version-bump commits: the build gets the version in `ANOMA_LAUNCHER_VERSION` and the tag in
+  `ANOMA_LAUNCHER_TAG`, which `launcher/src/backend.rs` reads with `option_env!` (falling back to `Cargo.toml`'s),
   so `--version`, the window, the User-Agent and the self-update comparison all use them. Each build checks
   `--version` says it.
 - Linux on GitHub `ubuntu-22.04`, Windows on `windows-latest`, macOS on the Mac mini's runner; each runs the
@@ -422,10 +422,10 @@ and by hand; pushes to `launcher` and `launcher-*` branches only build.
 - Published with `--latest=false`: the repository's latest release stays a game release. Notes list the pull
   requests under New and Fixed; Kira posts launcher releases without pinging.
 
-Making a launcher release GitHub's latest instead would break servers: every `horizon-server` already installed,
+Making a launcher release GitHub's latest instead would break servers: every `anoma-server` already installed,
 `install.sh` and `install.ps1` ask for `releases/latest` and expect the game's archives there, and a server that
 can't update can't fetch the fix either. So the game release stays the latest, and it sends people to the launcher
-(#1647): its notes open with a "Want to play? Download the Horizon launcher" block (`PLAYERS` in
+(#1647): its notes open with a "Want to play? Download the Anoma launcher" block (`PLAYERS` in
 `tools/release_train.py`: raw HTML, which GitHub shows and launchers' notes skip; the site's Releases page leaves
 it out too), and its archives carry labels ("Game files the
 launcher installs: Linux (…)") that GitHub shows in place of the file names. Everything that downloads matches
@@ -521,8 +521,8 @@ comment on any issue or pull request (`.github/workflows/nightly-command.yml`, `
 - **Jobs.** `pick` chooses or assembles the commit and writes the notes (each pull request in it with its title,
   author and who picked it, or for a union the open pull requests it holds beyond main). `build` is
   `game-build.yml`, the same builds and smoke test as a release, with the version `nightly-<date>` and
-  `HORIZON_NIGHTLY="<date> <short sha>"` built in, macOS signed ad hoc. `sign` signs SHA256SUMS for the channel
-  (the message says `horizon release nightly`, so a nightly's signature never passes for a release's). `publish`
+  `ANOMA_NIGHTLY="<date> <short sha>"` built in, macOS signed ad hoc. `sign` signs SHA256SUMS for the channel
+  (the message says `anoma release nightly`, so a nightly's signature never passes for a release's). `publish`
   checks the signature and the smoke test (not `release-blocker`: a nightly is how blockers get tested), renames the
   previous `nightly` pre-release to `nightly-<its date>`, publishes the new one as the `nightly` pre-release (never
   GitHub's latest), and deletes the `nightly-<date>` pre-releases and tags older than 7 days, nothing else.
@@ -532,13 +532,13 @@ comment on any issue or pull request (`.github/workflows/nightly-command.yml`, `
   merge with a read-only token that isn't kept in the checkout and no secrets; the runner's Developer ID keychain
   stays locked. `sign` is the only job with the key, and checks out only main's `tools/ci/sign_release.sh`, which
   hashes the archives with the runner's `sha256sum` and signs with its OpenSSL: it never runs what `build` made.
-  `publish` runs main's `horizon-release-sign`, never the archives. Nothing a nightly's build leaves reaches a
+  `publish` runs main's `anoma-release-sign`, never the archives. Nothing a nightly's build leaves reaches a
   release either: `game-build.yml`'s `trusted` input is true only for `release.yml`. An untrusted build runs its
-  macOS jobs on the runner that runs pull requests' parity jobs (`horizon-game`), never the release runner
+  macOS jobs on the runner that runs pull requests' parity jobs (`anoma-game`), never the release runner
   (`MAC_RUNNER`), and its Rust cache has its own key and is never saved. A trusted build doesn't use the machine's
-  shared sccache, which pull requests' jobs write (`HORIZON_NO_SCCACHE`, `tools/ci/runner-env.sh`).
+  shared sccache, which pull requests' jobs write (`ANOMA_NO_SCCACHE`, `tools/ci/runner-env.sh`).
 - **Players.** Releases stay the default and the only channel any launcher follows unless its player turns Nightly
-  on. `release_train.py`, `horizon-server update`, `install.sh` and the launcher's release list skip the tags: none
+  on. `release_train.py`, `anoma-server update`, `install.sh` and the launcher's release list skip the tags: none
   of them is `vX.Y.Z`.
 
 ```sh
@@ -569,7 +569,7 @@ Releases ship often, so nothing they leave behind may grow without bound.
 
 - **Artifacts:** every upload keeps 3 days (nightly parity logs 7); a release's assets live on the release itself.
 - **Mac runners:** `tools/ci/runner-gc.sh` runs every 6 hours from launchd on the Mac mini, as a copy taken from main
-  (`~/.actions-runners/runner-gc.sh`, plist `dev.horizon.runner-gc`), never from a pull request's checkout. It skips a
+  (`~/.actions-runners/runner-gc.sh`, plist `dev.anoma.runner-gc`), never from a pull request's checkout. It skips a
   runner in a job, removes a checkout's cargo build folders past 12 GB (`MAX_TARGET_GB`) and harness work folders
   under `.local/` untouched for 3 days (`STALE_DAYS`), and keeps the 2 newest shared preparations (`KEEP_PREPARED`)
   while no runner works. It also stops harness JVMs (vanilla servers, oracles) left orphaned for 3 hours
@@ -577,4 +577,4 @@ Releases ship often, so nothing they leave behind may grow without bound.
   stops its own harnesses on SIGTERM and SIGHUP (a cancelled job), so these come only from a SIGKILL or a harness run
   by hand. Runner builds go through the machine's sccache (`tools/ci/runner-env.sh`), so what it removes
   comes back from the cache. Update the copy after changing the script:
-  `ssh macmini 'curl -fsSL https://raw.githubusercontent.com/horizon-rust/horizon/main/tools/ci/runner-gc.sh -o ~/.actions-runners/runner-gc.sh'`.
+  `ssh macmini 'curl -fsSL https://raw.githubusercontent.com/JeremGamingYT/Anoma/main/tools/ci/runner-gc.sh -o ~/.actions-runners/runner-gc.sh'`.

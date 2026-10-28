@@ -14,23 +14,24 @@
 /run/
 /logs/
 /dist/
-/mods/horizon/build/
+/mods/anoma/build/
 /saves/
 /backups/
 /tools/logs/
 .DS_Store
 # What the client writes to its working directory when run from the repo root.
 /options.txt
-/horizon.txt
-/horizon-graphics.txt
-/horizon-controller.txt
-/horizon-extras.txt
-/horizon-player.txt
+/anoma.txt
+/anoma-graphics.txt
+/anoma-controller.txt
+/anoma-extras.txt
+/anoma-player.txt
 /servers.dat
 /screenshots/
-/.horizon-cache/
+/.anoma-cache/
 /crash-reports/
 /debug/
 
 # Release-only compiled original exporter bundle.
 /exporters/
+/command_history.txt

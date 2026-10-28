@@ -1,16 +1,16 @@
 //! A shortcut on the desktop that plays one instance: it runs
-//! `horizon-launcher play --instance <id>`, so the game starts without the launcher's window.
+//! `anoma-launcher play --instance <id>`, so the game starts without the launcher's window.
 //!
-//! - Linux: `<name> (Horizon).desktop` on the desktop (executable, and marked trusted with `gio`
+//! - Linux: `<name> (Anoma).desktop` on the desktop (executable, and marked trusted with `gio`
 //!   where it exists, so GNOME starts it), and the same entry in the applications menu
-//!   (`applications/horizon-instance-<id>.desktop`, `desktop::data_home`).
-//! - macOS: `<name> (Horizon).app`, a small app whose program is a shell script, with Horizon's
+//!   (`applications/anoma-instance-<id>.desktop`, `desktop::data_home`).
+//! - macOS: `<name> (Anoma).app`, a small app whose program is a shell script, with Anoma's
 //!   icon. It has no Dock icon of its own (`LSUIElement`): the game's window is the one to see.
-//! - Windows: `<name> (Horizon).lnk`, a Shell Link as Microsoft's published [MS-SHLLINK] format
-//!   lays it out, to the launcher's `.exe` with Horizon's icon.
+//! - Windows: `<name> (Anoma).lnk`, a Shell Link as Microsoft's published [MS-SHLLINK] format
+//!   lays it out, to the launcher's `.exe` with Anoma's icon.
 //!
 //! Each shortcut names its instance's id inside it, so removing finds it after a rename.
-//! `HORIZON_LAUNCHER_DESKTOP` points the desktop folder elsewhere, for tests.
+//! `ANOMA_LAUNCHER_DESKTOP` points the desktop folder elsewhere, for tests.
 //!
 //! [MS-SHLLINK]: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/
 use crate::desktop;
@@ -18,12 +18,12 @@ use crate::desktop_seams;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const DESKTOP_ENV: &str = "HORIZON_LAUNCHER_DESKTOP";
-const MAC_ICON: &[u8] = include_bytes!("../../packaging/icons/horizon.icns");
+pub const DESKTOP_ENV: &str = "ANOMA_LAUNCHER_DESKTOP";
+const MAC_ICON: &[u8] = include_bytes!("../../packaging/icons/anoma.icns");
 /// The key a Linux shortcut names its instance with.
-const INSTANCE_KEY: &str = "X-Horizon-Instance";
+const INSTANCE_KEY: &str = "X-Anoma-Instance";
 /// And a macOS one, in its Info.plist.
-const MAC_KEY: &str = "<key>HorizonInstance</key>";
+const MAC_KEY: &str = "<key>AnomaInstance</key>";
 
 /// The kinds of shortcut, one per system: all of them can be written and tested anywhere.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,7 +53,7 @@ impl System {
     }
 }
 
-/// The desktop folder: `HORIZON_LAUNCHER_DESKTOP`, else the system's.
+/// The desktop folder: `ANOMA_LAUNCHER_DESKTOP`, else the system's.
 pub fn desktop_dir() -> Option<PathBuf> {
     std::env::var_os(DESKTOP_ENV)
         .filter(|v| !v.is_empty())
@@ -74,7 +74,7 @@ pub fn file_name(name: &str, system: System) -> String {
         .collect();
     let clean = clean.trim().trim_matches('.');
     let clean = if clean.is_empty() { "Instance" } else { clean };
-    format!("{clean} (Horizon).{}", system.extension())
+    format!("{clean} (Anoma).{}", system.extension())
 }
 
 /// The id as a file name or bundle id part: letters, digits and `-`.
@@ -91,13 +91,13 @@ pub fn desktop_entry(exe: &Path, id: &str, name: &str) -> String {
         "[Desktop Entry]\n\
          Type=Application\n\
          Name={name}\n\
-         Comment=Play {name} in Horizon\n\
+         Comment=Play {name} in Anoma\n\
          Exec={} play --instance {}\n\
          TryExec={}\n\
-         Icon=horizon\n\
+         Icon=anoma\n\
          Terminal=false\n\
          Categories=Game;\n\
-         StartupWMClass=horizon\n\
+         StartupWMClass=anoma\n\
          {INSTANCE_KEY}={id}\n",
         desktop::quote(exe),
         desktop::quote(Path::new(id)),
@@ -129,11 +129,11 @@ pub fn mac_app(exe: &Path, id: &str, name: &str) -> Vec<(&'static str, Vec<u8>, 
 	<key>CFBundleExecutable</key>
 	<string>play</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.horizon.instance.{}</string>
+	<string>dev.anoma.instance.{}</string>
 	<key>CFBundleName</key>
 	<string>{}</string>
 	<key>CFBundleIconFile</key>
-	<string>horizon</string>
+	<string>anoma</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSUIElement</key>
@@ -148,7 +148,7 @@ pub fn mac_app(exe: &Path, id: &str, name: &str) -> Vec<(&'static str, Vec<u8>, 
         xml(id),
     );
     let script = format!(
-        "#!/bin/sh\n# Plays the Horizon instance {}.\nexec {} play --instance {}\n",
+        "#!/bin/sh\n# Plays the Anoma instance {}.\nexec {} play --instance {}\n",
         name.replace('\n', " "),
         sh_quote(&exe.to_string_lossy()),
         sh_quote(id),
@@ -156,7 +156,7 @@ pub fn mac_app(exe: &Path, id: &str, name: &str) -> Vec<(&'static str, Vec<u8>, 
     vec![
         ("Contents/Info.plist", plist.into_bytes(), false),
         ("Contents/MacOS/play", script.into_bytes(), true),
-        ("Contents/Resources/horizon.icns", MAC_ICON.to_vec(), false),
+        ("Contents/Resources/anoma.icns", MAC_ICON.to_vec(), false),
     ]
 }
 
@@ -268,7 +268,7 @@ fn write(path: &Path, bytes: &[u8], program: bool) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         fs::create_dir_all(dir).map_err(fail)?;
     }
-    let temp = path.with_extension("horizon-tmp");
+    let temp = path.with_extension("anoma-tmp");
     fs::write(&temp, bytes).map_err(fail)?;
     #[cfg(unix)]
     if program {
@@ -296,7 +296,7 @@ pub fn make_in(
     trash: Trash,
 ) -> Result<Vec<PathBuf>, String> {
     let path = desktop.join(file_name(name, system));
-    let item = menu.map(|m| m.join(format!("horizon-instance-{}.desktop", slug(id))));
+    let item = menu.map(|m| m.join(format!("anoma-instance-{}.desktop", slug(id))));
     for old in find_in(desktop, menu, id) {
         if old != path && Some(&old) != item.as_ref() {
             trash(&old)?;
@@ -328,7 +328,7 @@ pub fn make_in(
             &lnk(
                 &exe.to_string_lossy(),
                 &windows_args(id),
-                &format!("Play {name} in Horizon"),
+                &format!("Play {name} in Anoma"),
             ),
             false,
         )?,
@@ -346,7 +346,7 @@ pub fn find_in(desktop: &Path, menu: Option<&Path>, id: &str) -> Vec<PathBuf> {
         .filter(|p| plays(p, id))
         .collect();
     if let Some(item) = menu
-        .map(|m| m.join(format!("horizon-instance-{}.desktop", slug(id))))
+        .map(|m| m.join(format!("anoma-instance-{}.desktop", slug(id))))
         .filter(|p| plays(p, id))
     {
         found.push(item);

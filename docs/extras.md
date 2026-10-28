@@ -1,4 +1,4 @@
-# Horizon extras
+# Anoma extras
 
 Optional conveniences built into the client: fullbright, dynamic lights, auto-reconnect,
 Mouse Tweaks-style inventory controls and inventory sorting. **Every one is off by default**: a fresh
@@ -9,16 +9,16 @@ again restores vanilla's behaviour completely.
 
 | Part | Code |
 |---|---|
-| Settings, parsing and saving | `crates/horizon-client/src/extras.rs` |
+| Settings, parsing and saving | `crates/anoma-client/src/extras.rs` |
 | FPS and click counters (for mods) | `extras.rs` (pure logic, unit tested) |
-| Dynamic lights: item glow, nearest sources | `crates/horizon-client/src/dynamic_light.rs` (unit tested), `game/dynamic_lights.rs`, `terrain.wgsl` and `entity.wgsl` (`dynamic_block_light`) |
-| HUD drawing (a mod's minimap, corner stacking) | `crates/horizon-client/src/extras_hud.rs` |
-| Minimap colours, tiles and image (for `render.set-minimap`) | `crates/horizon-client/src/minimap.rs` |
-| Reconnect policy and backoff | `crates/horizon-client/src/reconnect.rs` |
-| Game glue (input hooks, per-frame update) | `crates/horizon-client/src/game/extras.rs` |
-| Mouse Tweaks-style controls, sort buttons | `crates/horizon-client/src/game/tweaks.rs` |
-| Sort order and its clicks | `crates/horizon-client/src/inv_sort.rs` (pure, unit tested) |
-| The settings page | `options_ui.rs` (`Page::Extras`): **Options → Horizon Settings... → Extras...** |
+| Dynamic lights: item glow, nearest sources | `crates/anoma-client/src/dynamic_light.rs` (unit tested), `game/dynamic_lights.rs`, `terrain.wgsl` and `entity.wgsl` (`dynamic_block_light`) |
+| HUD drawing (a mod's minimap, corner stacking) | `crates/anoma-client/src/extras_hud.rs` |
+| Minimap colours, tiles and image (for `render.set-minimap`) | `crates/anoma-client/src/minimap.rs` |
+| Reconnect policy and backoff | `crates/anoma-client/src/reconnect.rs` |
+| Game glue (input hooks, per-frame update) | `crates/anoma-client/src/game/extras.rs` |
+| Mouse Tweaks-style controls, sort buttons | `crates/anoma-client/src/game/tweaks.rs` |
+| Sort order and its clicks | `crates/anoma-client/src/inv_sort.rs` (pure, unit tested) |
+| The settings page | `options_ui.rs` (`Page::Extras`): **Options → Anoma Settings... → Extras...** |
 
 The settings are grouped by extra, under a header each, two buttons to a row as
 vanilla's options lists are, and each says what it does in its tooltip. An
@@ -30,12 +30,12 @@ extras stay out of the way of other input and options work.
 
 ## Options storage
 
-`horizon-extras.txt` beside `options.txt`, in the same `key:value` format as
-`horizon-graphics.txt`. `options.txt` is untouched, so a vanilla client can share
+`anoma-extras.txt` beside `options.txt`, in the same `key:value` format as
+`anoma-graphics.txt`. `options.txt` is untouched, so a vanilla client can share
 the folder. Unknown or broken lines fall back to the defaults.
 
-Extras' keys (the sort key) are Horizon settings stored in that file and bound on
-the Extras page, not in vanilla's Key Binds screen: Horizon has no Horizon category
+Extras' keys (the sort key) are Anoma settings stored in that file and bound on
+the Extras page, not in vanilla's Key Binds screen: Anoma has no Anoma category
 in Controls, and adding one would put a non-vanilla mapping into `options.txt`.
 
 ## The extras
@@ -62,13 +62,13 @@ in Controls, and adding one would put a non-vanilla mapping into `options.txt`.
 
 ### Moved to the mod browser
 
-The **FPS counter**, **Keystrokes**, **Zoom** and the **Minimap** are official mods now (`mods/official/`, [mods.md](mods.md#horizons-official-mods)),
+The **FPS counter**, **Keystrokes**, **Zoom** and the **Minimap** are official mods now (`mods/official/`, [mods.md](mods.md#anomas-official-mods)),
 with the same look and options. On the first start after the update, a player who had one on gets the mod installed
-from Horizon's registry and turned on, with their corner and options carried over (Zoom's key too, into
-`horizon-mods.txt`, when it wasn't Z), and reads one line in the chat ("Zoom moved to the mod browser: installed for
+from Anoma's registry and turned on, with their corner and options carried over (Zoom's key too, into
+`anoma-mods.txt`, when it wasn't Z), and reads one line in the chat ("Zoom moved to the mod browser: installed for
 you"). The install is checked like the launcher's (size,
-SHA-256, signature, manifest); if it fails (offline), the next start tries again. `horizon-extras.txt` keeps the old
-keys and lists what was done in `movedToMods`. Code: `crates/horizon-client/src/moved_extras.rs`,
+SHA-256, signature, manifest); if it fails (offline), the next start tries again. `anoma-extras.txt` keeps the old
+keys and lists what was done in `movedToMods`. Code: `crates/anoma-client/src/moved_extras.rs`,
 `game/moved_extras.rs`.
 
 The game still draws the minimap, for the mod (`render.set-minimap`, [mods.md](mods.md)):

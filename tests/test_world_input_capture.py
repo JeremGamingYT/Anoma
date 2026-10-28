@@ -29,8 +29,8 @@ def method(source, name):
 
 class WorldInputCaptureTests(unittest.TestCase):
     def test_loading_completion_wiring(self):
-        game = (ROOT / "crates/horizon-client/src/game.rs").read_text(encoding="utf-8")
-        remote = (ROOT / "crates/horizon-client/src/game/remote.rs").read_text(encoding="utf-8")
+        game = (ROOT / "crates/anoma-client/src/game.rs").read_text(encoding="utf-8")
+        remote = (ROOT / "crates/anoma-client/src/game/remote.rs").read_text(encoding="utf-8")
         spawn = method(game, "spawn_player")
         self.assertLess(spawn.index("self.player = Some(player)"),
                         spawn.index("self.capture_loaded_world()"))
@@ -43,7 +43,7 @@ class WorldInputCaptureTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("rustc"), "requires Rust")
     def test_capture_lifecycle(self):
-        source = (ROOT / "crates/horizon-client/src/game.rs").read_text(encoding="utf-8")
+        source = (ROOT / "crates/anoma-client/src/game.rs").read_text(encoding="utf-8")
         fixture = r'''
 use std::cell::Cell;
 #[derive(Clone, Copy, PartialEq)]
@@ -199,7 +199,7 @@ fn main() {
 '''
         fixture = fixture.replace("METHODS", method(source, "capture") + "\n" +
                                   method(source, "capture_loaded_world"))
-        with tempfile.TemporaryDirectory(prefix="horizon-input-") as folder:
+        with tempfile.TemporaryDirectory(prefix="anoma-input-") as folder:
             folder = Path(folder)
             rust = folder / "capture.rs"
             binary = folder / ("capture.exe" if os.name == "nt" else "capture")

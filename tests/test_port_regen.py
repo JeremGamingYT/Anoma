@@ -30,7 +30,7 @@ class PinTests(unittest.TestCase):
 
 
 class CompileErrorTests(unittest.TestCase):
-    OUTPUT = """/x/mods/horizon/src/test/java/dev/horizonlab/parity/ParityData.java:45: error: cannot find symbol
+    OUTPUT = """/x/mods/anoma/src/test/java/dev/anomalab/parity/ParityData.java:45: error: cannot find symbol
         var context = TagLoader.buildUpdatedLookups(layers.getAccessForLoading(RegistryLayer.WORLD), staticTags);
                                                                                             ^
   symbol:   variable WORLD

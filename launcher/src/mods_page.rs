@@ -1,34 +1,28 @@
-//! The Mods page: search Horizon's own registry for mods made for Horizon, or Modrinth
-//! (CurseForge: coming soon) for Java mods, modpacks and resource packs, see where each comes
-//! from and how well it runs (a Java mod's jar is checked first; a Horizon mod says whether it is
-//! signed and what it may do), install it with its checksum checked, turn Horizon mods on and
-//! off, and update or remove what was installed (`horizon_launcher::browser`). Imported modpacks
-//! are listed on its Modpacks tab.
+//! The Mods page: search Modrinth (CurseForge: coming soon) for Java mods, modpacks and resource
+//! packs, see where each comes from and how well it runs (a Java mod's jar is checked first),
+//! install it with its checksum checked, and update or remove what was installed
+//! (`anoma_launcher::browser`). Imported modpacks are listed on its Modpacks tab.
 use super::servers_page::{type_key, Key};
 use super::*;
-use horizon_launcher::browser::{
-    self, horizon, installed, java, Kind as PackKind, Project, Query, SourceId, Support,
+use anoma_launcher::browser::{
+    self, installed, java, Kind as PackKind, Project, Query, SourceId, Support,
 };
-use horizon_launcher::modpacks;
-use horizon_port_pack::check::Check;
+use anoma_launcher::modpacks;
+use anoma_port_pack::check::Check;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// The kinds, as the Mods page's tabs: name and icon.
-const KINDS: [(PackKind, &str, &str); 5] = [
+const KINDS: [(PackKind, &str, &str); 4] = [
     (PackKind::Mod, "Mods", "box"),
     (PackKind::Modpack, "Modpacks", "archive"),
     (PackKind::ResourcePack, "Resource packs", "image"),
-    (PackKind::Shader, "Shader packs", "zap"),
     (PackKind::DataPack, "Data packs", "notes"),
 ];
 /// Java mods checked at once.
 const CHECKING: usize = 2;
 /// The sources to pick from; CurseForge is shown beside them as coming soon.
-const SOURCES: [(SourceId, &str); 2] = [
-    (SourceId::Modrinth, "Modrinth"),
-    (SourceId::Horizon, "Horizon"),
-];
+const SOURCES: [(SourceId, &str); 1] = [(SourceId::Modrinth, "Modrinth")];
 const PAGE: usize = 20;
 
 pub(super) enum Event {
@@ -39,10 +33,6 @@ pub(super) enum Event {
     Updates(HashMap<(SourceId, String), String>),
     /// A Java mod's check: its jar read, or why it couldn't be.
     Checked((SourceId, String), Result<Box<Check>, String>),
-    /// What a Horizon registry project says before install: signed or not, what it may do.
-    About(HashMap<String, Vec<String>>),
-    /// Registry files taken down that the launcher turned off.
-    TakenDown(Vec<String>),
     /// A project page's part, an image or a filter's values (`mods_project`).
     Loaded(super::mods_project::Loaded),
 }
@@ -85,8 +75,6 @@ pub(super) struct Mods {
     confirm_remove: Option<String>,
     /// Java mods' checks, by source and project.
     pub(super) checks: HashMap<(SourceId, String), Checking>,
-    /// Horizon registry projects' trust and capabilities, by id ([`horizon::trust_and_capabilities`]).
-    pub(super) about: HashMap<String, Vec<String>>,
     /// The project page, filters and images.
     pub(super) browse: super::mods_project::Browse,
     pub(super) tx: Sender<Event>,
@@ -108,7 +96,7 @@ impl Mods {
     /// Reads the instance's worlds again; the world picked for data packs stays when it is
     /// still there, else the last played.
     fn read_worlds(&mut self) {
-        self.worlds = horizon_launcher::worlds::list(&self.home())
+        self.worlds = anoma_launcher::worlds::list(&self.home())
             .into_iter()
             .map(|w| (w.path, w.name))
             .collect();
@@ -128,22 +116,15 @@ impl Mods {
 
     pub(super) fn new(cx: &mut App) -> Self {
         let (tx, rx) = channel();
-        let page = std::env::var("HORIZON_LAUNCHER_PAGE");
+        let page = std::env::var("ANOMA_LAUNCHER_PAGE");
         let kind = match page.as_deref() {
             Ok("modpacks") => PackKind::Modpack,
-            Ok("shaders") => PackKind::Shader,
             Ok("datapacks") => PackKind::DataPack,
             _ => PackKind::Mod,
         };
         Self {
             kind,
-            // `HORIZON_LAUNCHER_SOURCE=horizon` opens on Horizon's registry, for screenshots;
-            // shader packs are only there.
-            source: match std::env::var("HORIZON_LAUNCHER_SOURCE").as_deref() {
-                _ if kind == PackKind::Shader => SourceId::Horizon,
-                Ok("horizon") => SourceId::Horizon,
-                _ => SourceId::Modrinth,
-            },
+            source: SourceId::Modrinth,
             text: String::new(),
             focus: cx.focus_handle().tab_index(0).tab_stop(true),
             focused: false,
@@ -167,7 +148,6 @@ impl Mods {
             updates: HashMap::new(),
             confirm_remove: None,
             checks: HashMap::new(),
-            about: HashMap::new(),
             browse: Default::default(),
             tx,
             rx,
@@ -187,7 +167,7 @@ impl Mods {
     /// How well a result runs: a Java mod's from its check once it has one.
     pub(super) fn support(&self, p: &Project) -> Support {
         let metadata = p.support();
-        if p.kind != PackKind::Mod || p.source == SourceId::Horizon || !metadata.installable() {
+        if p.kind != PackKind::Mod || !metadata.installable() {
             return metadata;
         }
         match self.checks.get(&(p.source, p.id.clone())) {
@@ -205,34 +185,6 @@ fn count(n: u64) -> String {
         1_000..1_000_000 => format!("{:.1}k", n as f64 / 1e3),
         _ => format!("{:.1}M", n as f64 / 1e6),
     }
-}
-
-/// A registry project's rating: five pixel stars, the mean's nearest whole number of them lit, the
-/// mean and how many; None while the ratings aren't known.
-pub(super) fn stars(id: &str, t: &theme::Theme) -> Option<Div> {
-    let row = div().flex().items_center().gap(px(2.));
-    Some(match horizon::rating(id)? {
-        None => row.text_color(t.muted).child("No ratings yet"),
-        Some(r) => {
-            let lit = r.average.round() as usize;
-            row.children((0..5).map(|i| {
-                blocks::icon(
-                    "star",
-                    12.,
-                    if i < lit {
-                        t.warn
-                    } else {
-                        t.muted.opacity(0.6)
-                    },
-                )
-            }))
-            .child(div().ml(px(4.)).child(format!(
-                "{:.1} ({})",
-                r.average,
-                count(r.count)
-            )))
-        }
-    })
 }
 
 /// A checksum as the page shows it: the algorithm and the first and last hex digits.
@@ -314,22 +266,12 @@ impl Launcher {
                     m.checks.insert(key, state);
                 }
                 Event::Loaded(l) => loaded.push(l),
-                Event::About(about) => {
-                    // Rows grow by a line: measure them again (`cull`).
-                    m.about.extend(about);
-                    m.results_list.reset();
-                }
-                Event::TakenDown(lines) => {
-                    m.message = Some(Ok(lines.join("\n")));
-                    m.installed = installed::Installed::load(&m.home()).entries;
-                    m.installed_list.reset();
-                }
             }
         }
-        // `HORIZON_LAUNCHER_PROJECT=<slug>` (with `HORIZON_LAUNCHER_PAGE=mods`): opens that
+        // `ANOMA_LAUNCHER_PROJECT=<slug>` (with `ANOMA_LAUNCHER_PAGE=mods`): opens that
         // project's page once a search finds it, for screenshots.
         if self.mods.browse.open.is_none() {
-            if let Ok(want) = std::env::var("HORIZON_LAUNCHER_PROJECT") {
+            if let Ok(want) = std::env::var("ANOMA_LAUNCHER_PROJECT") {
                 if let Some(p) = self
                     .mods
                     .results
@@ -337,7 +279,7 @@ impl Launcher {
                     .find(|p| p.id == want || p.slug == want)
                     .cloned()
                 {
-                    std::env::remove_var("HORIZON_LAUNCHER_PROJECT");
+                    std::env::remove_var("ANOMA_LAUNCHER_PROJECT");
                     self.mods_open(p);
                 }
             }
@@ -375,64 +317,7 @@ impl Launcher {
             let result = browser::source(source)
                 .ok_or_else(|| format!("{} isn't set up.", source.label()))
                 .and_then(|s| s.search(&query));
-            let about: HashMap<String, Vec<String>> = match (&result, source) {
-                (Ok(found), SourceId::Horizon) => found
-                    .iter()
-                    .map(|p| (p.id.clone(), horizon::trust_and_capabilities(&p.id)))
-                    .collect(),
-                _ => HashMap::new(),
-            };
             let _ = tx.send(Event::Found(search, offset, result));
-            if !about.is_empty() {
-                let _ = tx.send(Event::About(about));
-            }
-        });
-    }
-
-    /// Reads the registry's index again when something installed came from it, and turns off
-    /// what it took down since (`horizon::turn_off_revoked`).
-    fn mods_taken_down(&mut self) {
-        if !self
-            .mods
-            .installed
-            .iter()
-            .any(|e| e.source == SourceId::Horizon)
-        {
-            return;
-        }
-        let tx = self.mods.tx.clone();
-        let home = self.mods.home();
-        std::thread::spawn(move || {
-            let Ok(index) = horizon::index() else {
-                return;
-            };
-            let lines = horizon::turn_off_revoked(&index, &home);
-            if !lines.is_empty() {
-                let _ = tx.send(Event::TakenDown(lines));
-            }
-        });
-    }
-
-    /// Turns a Horizon mod the browser installed on or off, as the game's Options > Mods does.
-    fn mods_switch(&mut self, e: &installed::Entry) {
-        let home = self.mods.home();
-        let Some(id) = horizon::mod_id(e) else {
-            return;
-        };
-        let on = !java::is_enabled(&home, id);
-        let revoked = horizon::known_index().and_then(|index| {
-            let hash = e.checksum.trim_start_matches("SHA-256:");
-            index.revoked(&e.project, hash).map(|r| r.reason.clone())
-        });
-        self.mods.message = Some(match revoked.filter(|_| on) {
-            Some(reason) => Err(format!("{} was taken down: {reason}", e.title)),
-            None => java::set_enabled(&home, id, on).map(|()| {
-                format!(
-                    "{} is {}. The game reads this when it starts.",
-                    e.title,
-                    if on { "on" } else { "off" }
-                )
-            }),
         });
     }
 
@@ -442,7 +327,7 @@ impl Launcher {
         let m = &mut self.mods;
         let todo: Vec<Project> = found
             .into_iter()
-            .filter(|p| p.kind == PackKind::Mod && p.source != SourceId::Horizon)
+            .filter(|p| p.kind == PackKind::Mod)
             .filter(|p| p.support().installable())
             .filter(|p| !m.checks.contains_key(&(p.source, p.id.clone())))
             .collect();
@@ -625,16 +510,6 @@ impl Launcher {
                         ));
                     }
                     modpack = p.kind == PackKind::Modpack;
-                    if modpack && p.source == SourceId::Horizon {
-                        let pack = horizon::pack::install(&p.id, &progress)?;
-                        return Ok(format!(
-                            "Installed {} {} as its own profile with {}, each checked. Play it \
-                             from the list above.",
-                            pack.name,
-                            pack.version,
-                            pack.mods.join(", ")
-                        ));
-                    }
                     if modpack {
                         let folder = modpacks::ports_dir().join("downloads");
                         let file = installed::fetch_modpack(&*source, &p, &folder, &|f| {
@@ -652,17 +527,10 @@ impl Launcher {
                         .iter()
                         .map(|e| format!("{} {}", e.title, e.number))
                         .collect();
-                    if p.source == SourceId::Horizon && p.kind == PackKind::Mod {
-                        return Ok(format!(
-                            "Installed {} into horizon-mods and turned it on, checksum checked \
-                             (Options > Mods in the game).",
-                            names.join(", ")
-                        ));
-                    }
                     if p.kind == PackKind::Mod {
                         let skipped = done.last().map_or(0, |e| e.skipped.len());
                         return Ok(format!(
-                            "Ported {} into horizon-mods and turned on (Options > Mods in the \
+                            "Ported {} into anoma-mods and turned on (Options > Mods in the \
                              game).{}",
                             names.join(", "),
                             if skipped > 0 {
@@ -759,7 +627,6 @@ impl Launcher {
             self.mods.confirm_remove = None;
             self.mods.read_worlds();
             self.mods_check_updates();
-            self.mods_taken_down();
             if !self.mods.loaded {
                 self.mods_search(0);
             }
@@ -767,8 +634,7 @@ impl Launcher {
         }
         let header = page_header(
             "Mods",
-            "Mods and shader packs made for Horizon from its own reviewed registry, and Java \
-             mods, modpacks and resource packs from Modrinth: Horizon ports what a Java mod \
+            "Java mods, modpacks and resource packs from Modrinth: Anoma ports what a Java mod \
              carries (blocks, items, recipes, worldgen) and says before you install what runs. Each file is checked \
              against its source's checksum before it reaches your game folder.",
             &t,
@@ -780,10 +646,6 @@ impl Launcher {
                 let _ = this.update(cx, |this, cx| {
                     if this.mods.kind != kind {
                         this.mods.kind = kind;
-                        // Horizon's own shader packs are on its registry only.
-                        if kind == PackKind::Shader {
-                            this.mods.source = SourceId::Horizon;
-                        }
                         // Data packs are on Modrinth only; a world may have been made since.
                         if kind == PackKind::DataPack {
                             this.mods.source = SourceId::Modrinth;
@@ -820,9 +682,7 @@ impl Launcher {
         // account's "Coming soon").
         let source_note = (self.mods.kind != PackKind::DataPack)
             .then(|| div().flex().child(self.mods_source_switch(cx)));
-        // The registry lists only what was made for Horizon: no "everything", no Modrinth filters.
-        let registry = self.mods.source == SourceId::Horizon;
-        let filters = (!registry).then(|| self.mods_filters(cx));
+        let filters = self.mods_filters(cx);
         let controls = div()
             .flex()
             .flex_col()
@@ -834,10 +694,10 @@ impl Launcher {
                     .items_center()
                     .gap(px(12.))
                     .child(self.mods_field(cx))
-                    .when(!registry, |d| d.child(toggle)),
+                    .child(toggle),
             )
             .children(source_note)
-            .children(filters)
+            .child(filters)
             .children(self.mods_target_line(cx));
         // The kinds are inventory tabs on the panel that holds the open one.
         let body = blocks::panel(&t).flex().flex_col().gap(px(24.)).p(px(20.));
@@ -1031,30 +891,6 @@ impl Launcher {
                 }
                 cx.notify();
             }));
-            if e.source == SourceId::Horizon && e.kind == PackKind::Mod {
-                let on =
-                    horizon::mod_id(e).is_some_and(|id| java::is_enabled(&self.mods.home(), id));
-                let entry = e.clone();
-                right = right.child(
-                    div()
-                        .id(SharedString::from(format!("mods-switch-{}", e.project)))
-                        .flex()
-                        .items_center()
-                        .gap(px(8.))
-                        .cursor_pointer()
-                        // Its id sits under the row's own, so one name serves every row.
-                        .child(switch("mods-switch-knob", on, &t))
-                        .child(text(theme::LABEL).text_color(t.ink_soft).child(if on {
-                            "On"
-                        } else {
-                            "Off"
-                        }))
-                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                            this.mods_switch(&entry);
-                            cx.notify();
-                        })),
-                );
-            }
             right = right.child(remove);
             let detail = div()
                 .flex()
@@ -1142,12 +978,10 @@ impl Launcher {
         if m.results.is_empty() {
             let line = if m.searching || !m.searched {
                 "Searching…"
-            } else if m.source == SourceId::Horizon {
-                "Nothing in Horizon's registry matches yet."
             } else if m.everything {
                 "Nothing found."
             } else {
-                "Nothing found that runs in Horizon. Show everything lists the rest."
+                "Nothing found that runs in Anoma. Show everything lists the rest."
             };
             return centered(line, &t);
         }
@@ -1162,7 +996,6 @@ impl Launcher {
             let busy = m.busy.as_ref().map(|b| b.0.as_str());
             let support = m.support(p);
             let checking = p.kind == PackKind::Mod
-                && p.source != SourceId::Horizon
                 && matches!(
                     m.checks.get(&(p.source, p.id.clone())),
                     None | Some(Checking::Running)
@@ -1234,20 +1067,9 @@ impl Launcher {
                 .child(div().truncate().child(p.summary.clone()))
                 .child(by.join(" · "))
                 .children(
-                    (p.source == SourceId::Horizon)
-                        .then(|| stars(&p.id, &t))
-                        .flatten(),
-                )
-                .children(
                     support
                         .reason()
                         .map(|r| div().text_color(t.ink_soft).child(r.to_string())),
-                )
-                .children(
-                    m.about
-                        .get(&p.id)
-                        .filter(|_| p.source == SourceId::Horizon)
-                        .map(|lines| div().text_color(t.ink_soft).child(lines.join(" · "))),
                 );
             let open = p.clone();
             let name = div()
@@ -1291,7 +1113,7 @@ impl Launcher {
 }
 
 impl Launcher {
-    /// The source switch: Modrinth or Horizon's registry, CurseForge shown as coming soon and not
+    /// The source switch: Modrinth, CurseForge shown as coming soon and not
     /// clickable, like the Microsoft account's "Coming soon".
     fn mods_source_switch(&self, cx: &mut Context<Self>) -> Stateful<Div> {
         let this = cx.entity().downgrade();

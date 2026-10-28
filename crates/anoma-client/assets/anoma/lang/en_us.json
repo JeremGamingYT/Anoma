@@ -1,0 +1,15 @@
+{
+  "anoma.options.controller": "Controller",
+  "anoma.options.vibration": "Vibration",
+  "anoma.options.adaptive_triggers": "Adaptive Triggers",
+  "anoma.options.lightbar": "Lightbar",
+  "anoma.options.look_sensitivity": "Look Sensitivity",
+  "anoma.options.invert_x": "Invert Look X",
+  "anoma.options.invert_y": "Invert Look Y",
+  "anoma.options.sneak_button": "Sneak Button",
+  "anoma.options.move_deadzone": "Move Deadzone",
+  "anoma.options.look_deadzone": "Look Deadzone",
+  "anoma.options.button_glyphs": "Button Glyphs",
+  "anoma.options.menu_navigation": "Menu Navigation",
+  "anoma.options.on_screen_keyboard": "On-Screen Keyboard"
+}

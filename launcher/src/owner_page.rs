@@ -1,4 +1,4 @@
-//! The owner gate in the window (`horizon_launcher::account::launch`): the screen that asks for a
+//! The owner gate in the window (`anoma_launcher::account::launch`): the screen that asks for a
 //! Microsoft account that owns Minecraft: Java Edition. It covers the launcher once for players
 //! without one (those who played offline before the gate), and again whenever Play is refused.
 //! The sign-in runs on it, code and all.
@@ -48,7 +48,7 @@ impl Launcher {
                     .child(format!("{}.", tr(account::NEEDS_OWNER))),
             )
             .child(text(theme::UI).text_color(t.muted).child(tr(
-                "Horizon needs a Microsoft account that owns Minecraft: Java Edition, like other launchers.",
+                "Anoma needs a Microsoft account that owns Minecraft: Java Edition, like other launchers.",
             )))
             .child(text(theme::UI).text_color(t.muted).child(tr(
                 "Your worlds, offline names and settings stay where they are.",

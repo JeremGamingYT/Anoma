@@ -39,7 +39,7 @@ fn a_summary_says_what_runs() {
 
 #[test]
 fn each_system_gets_its_plan() {
-    let game = os(&["/opt/horizon-client", "--world", "My World"]);
+    let game = os(&["/opt/anoma-client", "--world", "My World"]);
     let wrapper = Launch {
         wrapper: "nice -n 5".into(),
         ..Launch::default()
@@ -50,7 +50,7 @@ fn each_system_gets_its_plan() {
             "nice",
             "-n",
             "5",
-            "/opt/horizon-client",
+            "/opt/anoma-client",
             "--world",
             "My World"
         ]))
@@ -68,12 +68,12 @@ fn each_system_gets_its_plan() {
     assert_eq!(
         plan(
             &both,
-            os(&[r"C:\Horizon\horizon-client.exe", "--world", "My World"]),
+            os(&[r"C:\Anoma\anoma-client.exe", "--world", "My World"]),
             true,
             &Found::default()
         ),
         Plan::Cmd {
-            line: r#"echo hi && nice -n 5 C:\Horizon\horizon-client.exe --world "My World""#.into()
+            line: r#"echo hi && nice -n 5 C:\Anoma\anoma-client.exe --world "My World""#.into()
         }
     );
 }
@@ -100,7 +100,7 @@ fn nothing_to_add_leaves_the_command_as_it_is() {
 #[cfg(unix)]
 #[test]
 fn the_wrapped_game_runs_after_its_pre_launch_command_in_its_folder() {
-    let dir = std::env::temp_dir().join(format!("horizon-launch-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("anoma-launch-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let mut game = Command::new("/bin/sh");

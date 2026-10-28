@@ -1,19 +1,19 @@
-//! `horizon-launcher <subcommand>`: the same steps as the window, from a terminal. Every
+//! `anoma-launcher <subcommand>`: the same steps as the window, from a terminal. Every
 //! command goes through `backend`; this file only parses arguments and prints.
 use clap::{Parser, Subcommand};
-use horizon_launcher::account::{self, Accounts};
-use horizon_launcher::backend::{self, Release};
-use horizon_launcher::instances;
-use horizon_launcher::server_list;
+use anoma_launcher::account::{self, Accounts};
+use anoma_launcher::backend::{self, Release};
+use anoma_launcher::instances;
+use anoma_launcher::server_list;
 use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Parser)]
 #[command(
-    name = "horizon-launcher",
+    name = "anoma-launcher",
     version = backend::VERSION,
-    about = "Installs, prepares and starts Horizon. Without a subcommand, opens the window."
+    about = "Installs, prepares and starts Anoma. Without a subcommand, opens the window."
 )]
 struct Cli {
     /// Print JSON instead of text, where a command has something to report
@@ -64,7 +64,7 @@ enum ServersCmd {
         #[arg(long)]
         version: Option<String>,
     },
-    /// Run a horizon-server command on a server, for example: servers run "My server" -- status
+    /// Run a anoma-server command on a server, for example: servers run "My server" -- status
     Run {
         /// The server's name or folder
         server: String,
@@ -205,9 +205,9 @@ enum InstanceCmd {
     },
     /// Make Play start this instance
     Select { instance: String },
-    /// Keep an instance on one installed Horizon version, or "latest" to follow updates again
+    /// Keep an instance on one installed Anoma version, or "latest" to follow updates again
     Version { instance: String, version: String },
-    /// Export an instance (or a port) to share: its settings, packs, Horizon mods and the worlds
+    /// Export an instance (or a port) to share: its settings, packs, Anoma mods and the worlds
     /// named, as a .mrpack (resource packs from Modrinth listed by download) or a zip. Never
     /// logs, screenshots or account data; worlds go without their per-player files
     Export {
@@ -329,7 +329,7 @@ enum PackKindArg {
     Shader,
 }
 
-impl From<PackKindArg> for horizon_launcher::packs::Kind {
+impl From<PackKindArg> for anoma_launcher::packs::Kind {
     fn from(k: PackKindArg) -> Self {
         match k {
             PackKindArg::Resource => Self::Resource,
@@ -433,7 +433,7 @@ enum ModsCmd {
         #[arg(long)]
         instance: Option<String>,
     },
-    /// Search for packs Horizon loads
+    /// Search for packs Anoma loads
     Search {
         text: Vec<String>,
         #[arg(long, value_enum, default_value_t = KindArg::Resource)]
@@ -444,7 +444,7 @@ enum ModsCmd {
         #[arg(long, value_enum, default_value_t = SourceArg::Modrinth)]
         source: SourceArg,
     },
-    /// Say how well a Java mod runs in Horizon: its jar is downloaded (checksum checked),
+    /// Say how well a Java mod runs in Anoma: its jar is downloaded (checksum checked),
     /// carried over and read; the answer is kept
     Check {
         project: String,
@@ -455,7 +455,7 @@ enum ModsCmd {
         source: SourceArg,
     },
     /// Install a pack and what it needs into an instance, by its id or slug (checksums
-    /// checked); a Java mod is ported into horizon-mods and turned on; a modpack is imported as
+    /// checked); a Java mod is ported into anoma-mods and turned on; a modpack is imported as
     /// an instance of its own; a data pack goes into the world `--world` names
     Install {
         project: String,
@@ -488,7 +488,7 @@ enum ModsCmd {
         #[arg(long)]
         instance: Option<String>,
     },
-    /// Turn on a mod the browser installed (horizon-mods.txt, as the game's Options > Mods does)
+    /// Turn on a mod the browser installed (anoma-mods.txt, as the game's Options > Mods does)
     Enable {
         project: String,
         /// The instance (default: the selected one)
@@ -509,7 +509,7 @@ enum KindArg {
     Mod,
     Resource,
     Modpack,
-    /// Horizon's own shader packs (Horizon's registry only)
+    /// Anoma's own shader packs (Anoma's registry only)
     Shader,
     /// Data packs (Modrinth): install one into a world with `mods install <pack> --world <name>`
     Datapack,
@@ -520,17 +520,14 @@ enum SourceArg {
     Modrinth,
     /// CurseForge support is coming soon
     Curseforge,
-    /// Horizon's own registry: mods, modpacks and resource packs made for Horizon, reviewed
-    Horizon,
 }
 
 impl SourceArg {
-    fn get(self) -> Result<Box<dyn horizon_launcher::browser::Source>, String> {
-        use horizon_launcher::browser::{self, SourceId};
+    fn get(self) -> Result<Box<dyn anoma_launcher::browser::Source>, String> {
+        use anoma_launcher::browser::{self, SourceId};
         let id = match self {
             SourceArg::Modrinth => SourceId::Modrinth,
             SourceArg::Curseforge => SourceId::CurseForge,
-            SourceArg::Horizon => SourceId::Horizon,
         };
         browser::source(id).ok_or_else(|| browser::CURSEFORGE_SOON.into())
     }
@@ -538,7 +535,7 @@ impl SourceArg {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// List Horizon releases, or the installed versions
+    /// List Anoma releases, or the installed versions
     Versions {
         /// Only the versions installed here (no network)
         #[arg(long)]
@@ -612,7 +609,7 @@ enum Cmd {
     /// while-playing stay|minimize|hide (what the window does while the game runs), language
     /// system|en|fr|ru (the window's language; system follows the computer's), accent
     /// violet|blue|teal|green|amber|red|pink, background PATH (a picture behind Home; "default"
-    /// shows Horizon's landscape)
+    /// shows Anoma's landscape)
     Settings {
         #[arg(value_parser = SETTING_KEYS)]
         key: Option<String>,
@@ -647,13 +644,13 @@ enum Cmd {
         #[arg(long)]
         crash: bool,
     },
-    /// Look for a newer Horizon release and launcher, and install them
+    /// Look for a newer Anoma release, and install it
     Update {
         /// Only report what is available
         #[arg(long)]
         check: bool,
     },
-    /// Linux: put Horizon in the applications menu (an entry and the icon, under
+    /// Linux: put Anoma in the applications menu (an entry and the icon, under
     /// $XDG_DATA_HOME), or take it out with --remove
     DesktopEntry {
         /// Remove the entry and the icon, and stop adding them back
@@ -704,8 +701,8 @@ enum Cmd {
         #[command(subcommand)]
         action: Option<ModsCmd>,
     },
-    /// Servers hosted with horizon-server (the Servers page): list them, create one, or run any
-    /// horizon-server command on one
+    /// Servers hosted with anoma-server (the Servers page): list them, create one, or run any
+    /// anoma-server command on one
     Servers {
         #[command(subcommand)]
         action: Option<ServersCmd>,
@@ -724,7 +721,7 @@ enum Cmd {
         test: bool,
     },
     /// Show or set No AI: on hides and turns off every AI feature (the companion, agent control,
-    /// horizon-ctl and both MCP servers); off, the default, makes them available
+    /// anoma-ctl and both MCP servers); off, the default, makes them available
     NoAi {
         /// Omit to show the current state
         #[arg(value_parser = ["on", "off"])]
@@ -783,7 +780,7 @@ fn set_setting(s: &mut backend::Settings, key: &str, value: &str) -> Result<(), 
                 .ok_or_else(|| format!("{value}: say stay, minimize or hide"))?
         }
         "accent" => {
-            use horizon_launcher::themes::Accent;
+            use anoma_launcher::themes::Accent;
             s.accent = Accent::parse(value).ok_or_else(|| {
                 let names: Vec<_> = Accent::ALL.iter().map(|a| a.name()).collect();
                 format!("{value}: say {}", names.join(", "))
@@ -792,14 +789,14 @@ fn set_setting(s: &mut backend::Settings, key: &str, value: &str) -> Result<(), 
         "background" => {
             s.background = match value.trim() {
                 "default" | "" => None,
-                file => Some(horizon_launcher::themes::keep_background(
+                file => Some(anoma_launcher::themes::keep_background(
                     &backend::data_dir(),
                     std::path::Path::new(file),
                 )?),
             }
         }
         "language" => {
-            use horizon_launcher::i18n::Language;
+            use anoma_launcher::i18n::Language;
             s.language = match value.trim() {
                 "system" | "default" => None,
                 code => Some(
@@ -811,7 +808,7 @@ fn set_setting(s: &mut backend::Settings, key: &str, value: &str) -> Result<(), 
         "proxy" => {
             if value == "default" || value.is_empty() {
                 s.proxy = None;
-            } else if let Some(why) = horizon_launcher::proxy::refuse(value) {
+            } else if let Some(why) = anoma_launcher::proxy::refuse(value) {
                 return Err(why);
             } else {
                 s.proxy = Some(value.trim().to_string());
@@ -836,7 +833,7 @@ fn settings_json(s: &backend::Settings) -> serde_json::Value {
         "while_playing": s.while_playing.name(),
         "language": s.language.map_or("system", |l| l.code()),
         "accent": s.accent.name(),
-        "background": horizon_launcher::themes::background(&backend::data_dir(), s.background.as_deref()),
+        "background": anoma_launcher::themes::background(&backend::data_dir(), s.background.as_deref()),
         "no_ai": backend::no_ai(),
     })
 }
@@ -855,7 +852,7 @@ pub fn run() -> Option<i32> {
     let cli = Cli::from_arg_matches(&definition.get_matches()).unwrap_or_else(|e| e.exit());
     let command = cli.command?;
     let result = match command {
-        Cmd::Mcp | Cmd::AgentConfig { .. } if no_ai => Err(horizon_core::no_ai::REFUSAL.into()),
+        Cmd::Mcp | Cmd::AgentConfig { .. } if no_ai => Err(anoma_core::no_ai::REFUSAL.into()),
         Cmd::Mcp => crate::mcp::serve(),
         command => execute(command, cli.json),
     };
@@ -970,7 +967,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                 );
             } else {
                 println!(
-                    "Installed {tag}. Prepare it next: horizon-launcher prepare --version {tag}"
+                    "Installed {tag}. Prepare it next: anoma-launcher prepare --version {tag}"
                 );
             }
         }
@@ -1037,7 +1034,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                 cmd.arg("--name").arg(name);
             }
             cmd.envs(accounts.look_env());
-            let played = attached(horizon_launcher::launch::wrap(cmd, &instance.launch));
+            let played = attached(anoma_launcher::launch::wrap(cmd, &instance.launch));
             if let Err(e) = instances::record_play(&instance.id, started.elapsed()) {
                 eprintln!("Play time not saved: {e}");
             }
@@ -1079,7 +1076,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             }
         }
         Cmd::Links => {
-            let links = backend::links();
+            let links = backend::Links::default();
             if as_json {
                 json(serde_json::to_value(&links).unwrap());
             } else {
@@ -1106,7 +1103,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             }
         }
         Cmd::AgentConfig { test: true, .. } => {
-            let tools = horizon_launcher::agents::self_test(backend::exe_path())?;
+            let tools = anoma_launcher::agents::self_test(backend::exe_path())?;
             if as_json {
                 json(serde_json::json!({ "answered": true, "tools": tools }));
             } else {
@@ -1114,7 +1111,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             }
         }
         Cmd::AgentConfig { client, .. } => {
-            use horizon_launcher::agents;
+            use anoma_launcher::agents;
             let exe = backend::exe_path();
             if as_json {
                 let mut all = agents::json(exe);
@@ -1152,7 +1149,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                 let value = value.ok_or("settings KEY VALUE: the value is missing")?;
                 set_setting(&mut settings, &key, &value)?;
                 settings.save();
-                horizon_launcher::proxy::announce(settings.proxy.clone());
+                anoma_launcher::proxy::announce(settings.proxy.clone());
             }
             let all = settings_json(&settings);
             if as_json {
@@ -1182,7 +1179,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             }
         }
         Cmd::ShareLog { instance } => {
-            use horizon_launcher::game_log;
+            use anoma_launcher::game_log;
             let i = match instance {
                 Some(name) => instances::find(&name)?,
                 None => instances::selected(),
@@ -1200,7 +1197,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             } else {
                 println!("{}", shared.url);
                 println!(
-                    "Delete it: horizon-launcher unshare-log {}:{}",
+                    "Delete it: anoma-launcher unshare-log {}:{}",
                     shared.id, shared.token
                 );
             }
@@ -1209,7 +1206,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             let (id, token) = shared
                 .split_once(':')
                 .ok_or("Give the \"<id>:<token>\" share-log printed.")?;
-            horizon_launcher::game_log::unshare(&horizon_launcher::game_log::Shared {
+            anoma_launcher::game_log::unshare(&anoma_launcher::game_log::Shared {
                 url: String::new(),
                 id: id.into(),
                 token: token.into(),
@@ -1231,11 +1228,11 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             settings.desktop_entry = Some(!remove);
             settings.save();
             if remove {
-                horizon_launcher::desktop::remove()?;
-                println!("Removed Horizon from the applications menu.");
+                anoma_launcher::desktop::remove()?;
+                println!("Removed Anoma from the applications menu.");
             } else {
-                horizon_launcher::desktop::install(backend::exe_path())?;
-                println!("Horizon is in the applications menu.");
+                anoma_launcher::desktop::install(backend::exe_path())?;
+                println!("Anoma is in the applications menu.");
             }
         }
         Cmd::Worlds { action } => worlds(
@@ -1270,36 +1267,18 @@ fn update(check: bool, as_json: bool) -> Result<(), String> {
     let updates = backend::check_updates()?;
     if as_json && check {
         json(serde_json::json!({
-            "horizon": updates.horizon.as_ref().map(|r| &r.tag),
-            "launcher": updates.launcher.as_ref().and_then(|r| backend::launcher_version(&r.tag)),
+            "anoma": updates.anoma.as_ref().map(|r| &r.tag),
             "launcher_current": backend::VERSION,
         }));
         return Ok(());
     }
-    match &updates.horizon {
-        None => println!("Horizon: up to date."),
-        Some(r) if check => println!("Horizon: {} is available.", r.tag),
+    match &updates.anoma {
+        None => println!("Anoma: up to date."),
+        Some(r) if check => println!("Anoma: {} is available.", r.tag),
         Some(r) => {
             let tag =
                 backend::install_tag(&r.tag, true, progress(format!("Installing {}", r.tag)))?;
-            println!("Horizon: installed {tag}.");
-        }
-    }
-    match &updates.launcher {
-        None => println!("Launcher: {} is up to date.", backend::VERSION),
-        Some(r) => {
-            let version = backend::launcher_version(&r.tag).unwrap_or_default();
-            if check {
-                println!(
-                    "Launcher: {version} is available (this is {}).",
-                    backend::VERSION
-                );
-            } else if !backend::self_update_allowed() {
-                println!("Launcher: {version} is available; this build does not replace itself.");
-            } else {
-                backend::self_update(r, progress(format!("Updating the launcher to {version}")))?;
-                println!("Launcher: updated to {version}. Restart the launcher to use it.");
-            }
+            println!("Anoma: installed {tag}.");
         }
     }
     Ok(())
@@ -1312,7 +1291,7 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
         accounts
             .find(who)
             .cloned()
-            .ok_or_else(|| format!("No signed-in account {who}. See `horizon-launcher account`."))
+            .ok_or_else(|| format!("No signed-in account {who}. See `anoma-launcher account`."))
     };
     match action {
         AccountCmd::List => {
@@ -1332,7 +1311,7 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
             } else if accounts.accounts.is_empty() && accounts.offline.is_empty() {
                 println!(
                     "No Microsoft account signed in. Play needs one that owns Minecraft: Java \
-                     Edition: horizon-launcher account sign-in"
+                     Edition: anoma-launcher account sign-in"
                 );
             } else {
                 for a in &accounts.accounts {
@@ -1418,7 +1397,7 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
             no_skin,
             no_cape,
         } => {
-            use horizon_launcher::skins::{self, Model};
+            use anoma_launcher::skins::{self, Model};
             let name = accounts
                 .offline
                 .iter()
@@ -1476,8 +1455,8 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
 
 /// `data`: the same consent as Settings → Data collection.
 fn data(action: DataCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::telemetry;
-    let review = |item: &horizon_telemetry::Item, yes: bool| -> Result<bool, String> {
+    use anoma_launcher::telemetry;
+    let review = |item: &anoma_telemetry::Item, yes: bool| -> Result<bool, String> {
         println!(
             "{}",
             serde_json::to_string_pretty(item).map_err(|e| e.to_string())?
@@ -1511,9 +1490,9 @@ fn data(action: DataCmd, as_json: bool) -> Result<(), String> {
                 println!("{name}: {}", if on { "on" } else { "off" });
             }
             println!("Waiting to be sent: {}", status["waiting"]);
-            match horizon_telemetry::endpoint() {
+            match anoma_telemetry::endpoint() {
                 Some(url) => println!("Server: {url}"),
-                None => println!("Server: turned off (HORIZON_TELEMETRY_URL=off), nothing is sent"),
+                None => println!("Server: turned off (ANOMA_TELEMETRY_URL=off), nothing is sent"),
             }
         }
         DataCmd::Allow { kinds } => {
@@ -1532,14 +1511,14 @@ fn data(action: DataCmd, as_json: bool) -> Result<(), String> {
         DataCmd::Delete => println!("{}", telemetry::delete_my_data()?),
         DataCmd::Send => println!("{:?}", telemetry::send()),
         DataCmd::Bug { text, log, yes } => {
-            telemetry::ensure_allowed(horizon_telemetry::Kind::Bug)?;
+            telemetry::ensure_allowed(anoma_telemetry::Kind::Bug)?;
             let item = telemetry::bug_report(&text, log)?;
             if review(&item, yes)? {
                 println!("{}", telemetry::submit(&item)?);
             }
         }
         DataCmd::Benchmark { file, yes } => {
-            telemetry::ensure_allowed(horizon_telemetry::Kind::Benchmark)?;
+            telemetry::ensure_allowed(anoma_telemetry::Kind::Benchmark)?;
             let item = telemetry::benchmark_report(&file)?;
             if review(&item, yes)? {
                 println!("{}", telemetry::submit(&item)?);
@@ -1550,13 +1529,13 @@ fn data(action: DataCmd, as_json: bool) -> Result<(), String> {
 }
 
 fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::servers::{self, NewServer, World};
+    use anoma_launcher::servers::{self, NewServer, World};
     let find = |which: &str| {
         servers::list()
             .into_iter()
             .find(|e| e.name == which || e.dir == std::path::Path::new(which))
             .ok_or_else(|| {
-                format!("No server called {which}: `horizon-launcher servers` lists them")
+                format!("No server called {which}: `anoma-launcher servers` lists them")
             })
     };
     match action {
@@ -1574,7 +1553,7 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
                         .collect(),
                 ));
             } else if list.is_empty() {
-                println!("No server yet: horizon-launcher servers create --accept-eula");
+                println!("No server yet: anoma-launcher servers create --accept-eula");
             }
             for e in list.iter().filter(|_| !as_json) {
                 println!(
@@ -1627,7 +1606,7 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
             let tag = backend::resolve_version(version.as_deref())?;
             servers::set_up(&tag)?;
             println!(
-                "Servers run Horizon {}",
+                "Servers run Anoma {}",
                 servers::runtime_release().unwrap_or(tag)
             );
         }
@@ -1638,7 +1617,7 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
                 .status()
                 .map_err(|e| e.to_string())?;
             if !status.success() {
-                return Err(format!("horizon-server exited with {status}"));
+                return Err(format!("anoma-server exited with {status}"));
             }
         }
         ServersCmd::Forget { server } => {
@@ -1655,8 +1634,8 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
 }
 
 fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::browser::{horizon, installed, Kind, Query, SourceId};
-    use horizon_launcher::modpacks;
+    use anoma_launcher::browser::{installed, java, Kind, Query};
+    use anoma_launcher::modpacks;
     // What the browser installs goes into an instance's game folder; Java mods' checks are kept
     // in the default one, shared by all.
     let home = match &action {
@@ -1673,17 +1652,6 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
     };
     let entry_json = |e: &installed::Entry| serde_json::to_value(e).unwrap_or_default();
     let line = |label: &str, f: f32| progress(label.to_string())(f);
-    let from_registry = installed::Installed::load(&home)
-        .entries
-        .iter()
-        .any(|e| e.source == SourceId::Horizon);
-    if from_registry {
-        if let Ok(index) = horizon::index() {
-            for said in horizon::turn_off_revoked(&index, &home) {
-                eprintln!("{said}");
-            }
-        }
-    }
     let on = matches!(action, ModsCmd::Enable { .. });
     match action {
         ModsCmd::List { .. } => {
@@ -1692,7 +1660,7 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                 json(list.iter().map(entry_json).collect());
             } else if list.is_empty() {
                 println!(
-                    "Nothing installed from the browser yet: horizon-launcher mods search <text>"
+                    "Nothing installed from the browser yet: anoma-launcher mods search <text>"
                 );
             }
             for e in list.iter().filter(|_| !as_json) {
@@ -1733,22 +1701,14 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                         "id": p.id, "slug": p.slug, "title": p.title, "summary": p.summary,
                         "author": p.author, "downloads": p.downloads, "page": p.page,
                         "license": p.license, "support": support.label(), "reason": support.reason(),
-                        "about": if p.source == SourceId::Horizon { horizon::trust_and_capabilities(&p.id) } else { Vec::new() },
                     })
                 }).collect());
             } else {
                 if datapack && !found.is_empty() {
-                    println!("{}\n", horizon_launcher::browser::DATAPACK_SUPPORT);
+                    println!("{}\n", anoma_launcher::browser::DATAPACK_SUPPORT);
                 }
                 for p in &found {
                     let support = p.support();
-                    if p.source == SourceId::Horizon {
-                        println!("{}  ({})  {}\n  {}", p.title, p.slug, p.author, p.summary);
-                        for line in horizon::trust_and_capabilities(&p.id) {
-                            println!("  {line}");
-                        }
-                        continue;
-                    }
                     let unchecked = p.kind == Kind::Mod && support.installable();
                     println!(
                         "{}  ({})  {} · {} downloads\n  {}",
@@ -1763,9 +1723,9 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                         p.summary
                     );
                     if unchecked {
-                        println!("  horizon-launcher mods check {}", p.slug);
+                        println!("  anoma-launcher mods check {}", p.slug);
                     } else if datapack {
-                        println!("  horizon-launcher mods install {} --world <world>", p.slug);
+                        println!("  anoma-launcher mods install {} --world <world>", p.slug);
                     } else if let Some(why) = support.reason() {
                         println!("  {why}");
                     }
@@ -1782,7 +1742,7 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
             if p.kind != Kind::Mod {
                 return Err(format!("{} isn't a Java mod.", p.title));
             }
-            let (version, c) = horizon_launcher::browser::java::check_project(
+            let (version, c) = anoma_launcher::browser::java::check_project(
                 &home,
                 &*source,
                 &p,
@@ -1822,7 +1782,7 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
             let source = source.get()?;
             let p = source.project(&project)?;
             if let Some(world) = world {
-                let world = horizon_launcher::worlds::find(&home, &world)?;
+                let world = anoma_launcher::worlds::find(&home, &world)?;
                 let done = installed::install_datapack(
                     &*source,
                     &p,
@@ -1854,23 +1814,6 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                     p.title
                 ));
             }
-            if p.kind == Kind::Modpack && p.source == SourceId::Horizon {
-                let pack = horizon::pack::install(&p.id, &line)?;
-                if as_json {
-                    json(
-                        serde_json::json!({"pack": pack.id, "version": pack.version, "mods": pack.mods, "home": horizon::pack::home(&pack.work)}),
-                    );
-                } else {
-                    println!(
-                        "{} {} is installed as its own profile, with {}.",
-                        pack.name,
-                        pack.version,
-                        pack.mods.join(", ")
-                    );
-                    println!("Play it: horizon-launcher modpack play {}", pack.id);
-                }
-                return Ok(());
-            }
             if p.kind == Kind::Modpack {
                 let folder = modpacks::ports_dir().join("downloads");
                 let file =
@@ -1882,7 +1825,7 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                     .map(|t| backend::resources(&t));
                 let pack = modpacks::import_and_port(&file, resources.as_deref(), log)?;
                 println!("{} ({})", modpacks::outcome(&pack), pack.summary());
-                println!("Play it: horizon-launcher modpack play {}", pack.slug);
+                println!("Play it: anoma-launcher modpack play {}", pack.slug);
                 return Ok(());
             }
             let done = installed::install(&*source, &p, everything, &home, &line)?;
@@ -1913,7 +1856,7 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                 });
             }
             for e in chosen {
-                let Some(source) = horizon_launcher::browser::source(e.source) else {
+                let Some(source) = anoma_launcher::browser::source(e.source) else {
                     println!("{}: {} isn't available here.", e.title, e.source.label());
                     continue;
                 };
@@ -1940,22 +1883,10 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                 .lookup(&project)
                 .cloned()
                 .ok_or_else(|| format!("{project} wasn't installed by the browser."))?;
-            let id = horizon::mod_id(&e)
+            let id = java::mod_id(&e)
                 .filter(|_| e.kind == Kind::Mod)
                 .ok_or_else(|| format!("{} isn't a mod: only mods turn on and off.", e.title))?;
-            if on {
-                if let Some(r) = horizon::index()
-                    .ok()
-                    .filter(|_| e.source == SourceId::Horizon)
-                    .and_then(|i| {
-                        i.revoked(&e.project, e.checksum.trim_start_matches("SHA-256:"))
-                            .cloned()
-                    })
-                {
-                    return Err(format!("{} was taken down: {}", e.title, r.reason));
-                }
-            }
-            horizon_launcher::browser::java::set_enabled(&home, id, on)?;
+            java::set_enabled(&home, id, on)?;
             println!("{} is {}.", e.title, if on { "on" } else { "off" });
         }
     }
@@ -2040,7 +1971,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
             mangohud,
             dedicated_gpu,
         } => {
-            use horizon_launcher::launch;
+            use anoma_launcher::launch;
             let env = env.as_deref().map(launch::parse_env).transpose()?;
             let [gamemode, mangohud, dedicated_gpu] =
                 [gamemode, mangohud, dedicated_gpu].map(|v| v.as_deref().map(on_off));
@@ -2121,7 +2052,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
             }
         }
         InstanceCmd::Shortcut { instance, remove } => {
-            use horizon_launcher::shortcut;
+            use anoma_launcher::shortcut;
             let i = match instance {
                 Some(name) => instances::find(&name)?,
                 None => instances::selected(),
@@ -2142,8 +2073,8 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
             }
         }
         InstanceCmd::Import { file, instance } => {
-            use horizon_launcher::import::{self, Dropped};
-            use horizon_launcher::modpacks;
+            use anoma_launcher::import::{self, Dropped};
+            use anoma_launcher::modpacks;
             match import::what(&file)? {
                 Dropped::Instance => {
                     let i = import::import_instance(&file, &|line, _| eprintln!("{line}"))?;
@@ -2151,7 +2082,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
                         json(value(&i, false));
                     } else {
                         println!(
-                            "Made the instance {} in {}: horizon-launcher instance select \"{}\"",
+                            "Made the instance {} in {}: anoma-launcher instance select \"{}\"",
                             i.name,
                             i.home.display(),
                             i.name
@@ -2162,7 +2093,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
                     let pack = modpacks::import(&file, &|line: String| eprintln!("{line}"))?;
                     println!("{} ({})", modpacks::outcome(&pack), pack.summary());
                     println!(
-                        "Port and play it: horizon-launcher modpack port {}",
+                        "Port and play it: anoma-launcher modpack port {}",
                         pack.slug
                     );
                 }
@@ -2171,15 +2102,15 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
                         Some(name) => instances::find(&name)?,
                         None => instances::selected(),
                     };
-                    let p = horizon_launcher::packs::add(&i.home, &file)?;
+                    let p = anoma_launcher::packs::add(&i.home, &file)?;
                     println!(
-                        "Added {} to {}: turn it on with horizon-launcher packs on",
+                        "Added {} to {}: turn it on with anoma-launcher packs on",
                         p.title, i.name
                     );
                 }
                 Dropped::DataPack => {
                     return Err(format!(
-                        "{} is a data pack: put it into a world with horizon-launcher worlds \
+                        "{} is a data pack: put it into a world with anoma-launcher worlds \
                          datapack-add <world> <file>",
                         file.display()
                     ))
@@ -2192,7 +2123,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
             world,
             out,
         } => {
-            use horizon_launcher::export::{self, Format};
+            use anoma_launcher::export::{self, Format};
             let i = match instance {
                 Some(name) => instances::find(&name)?,
                 None => instances::selected(),
@@ -2203,7 +2134,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
             };
             let worlds = world
                 .iter()
-                .map(|w| horizon_launcher::worlds::find(&i.home, w).map(|w| w.folder))
+                .map(|w| anoma_launcher::worlds::find(&i.home, w).map(|w| w.folder))
                 .collect::<Result<Vec<_>, _>>()?;
             let linked = match format {
                 Format::Mrpack => export::linkable(&i.home, &export::from_modrinth),
@@ -2242,7 +2173,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
 }
 
 fn game_packs(action: PacksCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::packs::{self, Kind};
+    use anoma_launcher::packs::{self, Kind};
     let home = |instance: Option<String>| -> Result<PathBuf, String> {
         Ok(match instance {
             Some(name) => instances::find(&name)?.home,
@@ -2314,11 +2245,11 @@ fn game_packs(action: PacksCmd, as_json: bool) -> Result<(), String> {
 
 fn set_pack(
     home: &std::path::Path,
-    kind: horizon_launcher::packs::Kind,
+    kind: anoma_launcher::packs::Kind,
     query: &str,
     on: bool,
 ) -> Result<(), String> {
-    use horizon_launcher::packs;
+    use anoma_launcher::packs;
     let pack = packs::find(home, kind, query)?;
     packs::set_enabled(home, &pack, on)?;
     println!("{} is {}.", pack.title, if on { "on" } else { "off" });
@@ -2326,7 +2257,7 @@ fn set_pack(
 }
 
 fn screenshots(action: ScreenshotsCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::screenshots;
+    use anoma_launcher::screenshots;
     let home = |instance: Option<String>| -> Result<PathBuf, String> {
         Ok(match instance {
             Some(name) => instances::find(&name)?.home,
@@ -2418,8 +2349,8 @@ fn multiplayer(action: MultiplayerCmd, as_json: bool) -> Result<(), String> {
 }
 
 fn worlds(action: WorldsCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::datapacks;
-    use horizon_launcher::worlds::{self, World};
+    use anoma_launcher::datapacks;
+    use anoma_launcher::worlds::{self, World};
     let home = |instance: Option<String>| -> Result<PathBuf, String> {
         Ok(match instance {
             Some(name) => instances::find(&name)?.home,
@@ -2521,15 +2452,10 @@ fn worlds(action: WorldsCmd, as_json: bool) -> Result<(), String> {
 }
 
 fn modpack(action: ModpackCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::browser::horizon;
-    use horizon_launcher::modpacks::{self, Imported};
-    use horizon_port_pack::report::Status;
+    use anoma_launcher::modpacks::{self, Imported};
+    use anoma_port_pack::report::Status;
     let log = &|line: String| eprintln!("{line}");
     let work = |pack: &str| {
-        let registry = horizon::pack::packs_dir().join(pack);
-        if horizon::pack::is_pack(&registry) {
-            return Ok(registry);
-        }
         let work = modpacks::ports_dir().join(pack);
         modpacks::load(&work).map(|_| work)
     };
@@ -2563,26 +2489,10 @@ fn modpack(action: ModpackCmd, as_json: bool) -> Result<(), String> {
     match action {
         ModpackCmd::List => {
             let packs = modpacks::list();
-            let registry = horizon::pack::list();
-            if packs.is_empty() && registry.is_empty() && !as_json {
-                println!("No modpack imported yet: horizon-launcher modpack import <pack>");
+            if packs.is_empty() && !as_json {
+                println!("No modpack imported yet: anoma-launcher modpack import <pack>");
             }
             packs.iter().for_each(show);
-            for p in &registry {
-                if as_json {
-                    json(
-                        serde_json::json!({"pack": p.id, "name": p.name, "version": p.version, "source": "horizon", "mods": p.mods}),
-                    );
-                } else {
-                    println!(
-                        "{} {}  ({}, from Horizon's registry)\n  {}",
-                        p.name,
-                        p.version,
-                        p.id,
-                        p.mods.join(", ")
-                    );
-                }
-            }
         }
         ModpackCmd::Import { path } => show(&modpacks::import(&path, log)?),
         ModpackCmd::Port {
@@ -2619,7 +2529,7 @@ mod tests {
     #[test]
     fn play_takes_extra_arguments_that_start_with_hyphens() {
         let cli = Cli::try_parse_from([
-            "horizon-launcher",
+            "anoma-launcher",
             "play",
             "--arg",
             "--server-thread",
@@ -2636,7 +2546,7 @@ mod tests {
     #[test]
     fn game_args_takes_one_line_that_starts_with_hyphens() {
         let cli = Cli::try_parse_from([
-            "horizon-launcher",
+            "anoma-launcher",
             "game-args",
             "--server-thread --render-distance 40",
         ])
@@ -2655,7 +2565,7 @@ mod tests {
     #[test]
     fn mods_commands_name_their_instance() {
         let parse = |args: &[&str]| {
-            let cli = Cli::try_parse_from([&["horizon-launcher", "mods"], args].concat()).unwrap();
+            let cli = Cli::try_parse_from([&["anoma-launcher", "mods"], args].concat()).unwrap();
             match cli.command {
                 Some(Cmd::Mods { action }) => action,
                 _ => panic!("expected mods"),
@@ -2677,7 +2587,7 @@ mod tests {
         assert!(parse(&[]).is_none());
         // Search and Check read no instance: checks are shared.
         assert!(Cli::try_parse_from([
-            "horizon-launcher",
+            "anoma-launcher",
             "mods",
             "search",
             "x",

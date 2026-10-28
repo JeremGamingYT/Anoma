@@ -13,8 +13,8 @@ except ImportError:
 
 def game_environment(base, root):
     root = Path(root)
-    env = dict(base, HORIZON_TELEMETRY_URL='off')
-    for key, folder in [('HORIZON_HOME', 'home'), ('HORIZON_LAUNCHER_HOME', 'launcher'),
+    env = dict(base, ANOMA_TELEMETRY_URL='off')
+    for key, folder in [('ANOMA_HOME', 'home'), ('ANOMA_LAUNCHER_HOME', 'launcher'),
                         ('XDG_DATA_HOME', 'data'), ('XDG_CONFIG_HOME', 'config')]:
         path = root / folder
         path.mkdir(parents=True, exist_ok=True)
@@ -27,7 +27,7 @@ def run_game(command, **kwargs):
     with tempfile.TemporaryDirectory(prefix='hz-fixture-') as root:
         kwargs['env'] = game_environment(kwargs.pop('env', os.environ), root)
         if any(key in kwargs['env'] for key in
-               ('HORIZON_COMMAND_SCRIPT', 'HORIZON_DISPENSE_FIXTURE', 'HORIZON_SCULK_FIXTURE')):
+               ('ANOMA_COMMAND_SCRIPT', 'ANOMA_DISPENSE_FIXTURE', 'ANOMA_SCULK_FIXTURE')):
             # These compare seeded rule/callback traces, not the client/server boundary.
             command = [*command, '--in-frame']
         return subprocess.run(command, **kwargs)
@@ -37,7 +37,7 @@ def run_game(command, **kwargs):
 def suite_lock():
     """Real-client CI suites share a GPU, even when parity.py runs harnesses in parallel."""
     import fcntl
-    with (Path(tempfile.gettempdir()) / 'horizon-integration-gpu.lock').open('a') as lock:
+    with (Path(tempfile.gettempdir()) / 'anoma-integration-gpu.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         yield
 

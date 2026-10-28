@@ -1,9 +1,9 @@
 {
- "format": "horizon-roadmap",
+ "format": "anoma-roadmap",
  "version": 1,
  "source": "roadmap/roadmap.toml",
  "overview": {
-  "today_plain": "Horizon is Minecraft: Java Edition 26.3 rewritten from scratch in Rust, so it runs faster on the same computer. Single player, LAN, servers, resource packs and Horizon's own mods work today, on your own copy of the game.",
+  "today_plain": "Anoma is Minecraft: Java Edition 26.3 rewritten from scratch in Rust, so it runs faster on the same computer. Single player, LAN, servers, resource packs and Anoma's own mods work today, on your own copy of the game.",
   "today_dev": "A native Rust and wgpu reimplementation of Java 26.3: the same saves, rules and terrain, checked against the real game by more than 300 differential harnesses (a Java oracle and a Rust probe on the same inputs). Single player runs on its own server thread, like vanilla's integrated server.",
   "help_plain": "Play it and tell us what differs from vanilla (Discord or GitHub), run the benchmark on your computer, vote for what you want next, or pick one of the Help wanted items.",
   "help_dev": "Read CONTRIBUTING.md, pick a Help wanted item or a To do card, check vanilla's code for the behaviour, and paste the block `python3 tools/pr_ready.py` prints in your pull request."
@@ -65,7 +65,7 @@
   },
   {
    "id": "extras",
-   "name": "Horizon extras"
+   "name": "Anoma extras"
   },
   {
    "id": "ai",
@@ -86,7 +86,7 @@
    "title": "Steady frames at long render distances",
    "status": "now",
    "area": "performance",
-   "plain": "Making Horizon faster than vanilla on every computer, with smooth camera movement even at 32 chunks, by spreading the work better over the processor's cores.",
+   "plain": "Making Anoma faster than vanilla on every computer, with smooth camera movement even at 32 chunks, by spreading the work better over the processor's cores.",
    "dev": "Frame pacing at render distance 32 (#678): long frames come from work competing with the render thread. In review: world generation workers build free structure starts instead of queueing them (#1760), the worker pool leaves one core as vanilla does (#1778), and the terrain vertex arena is read as storage where flat draws run (#1742). Still open: far terrain at 48 to 64 chunks (#718) and CPU-bound fields of block entities (#717). Every change shows before and after numbers from `tools/perf_bench.py` against vanilla 26.3 (docs/benchmark.md).",
    "links": [
     "#678",
@@ -118,8 +118,8 @@
    "title": "Modpacks' world generation, natively",
    "status": "now",
    "area": "modpacks",
-   "plain": "Making the world-generation mods of popular modpacks (new structures, YUNG's dungeons and mineshafts, packs built on Lithostitched) generate their worlds in Horizon, natively and fast.",
-   "dev": "`horizon-port-pack` carries a pack's data-driven content over; structure mods that need code get a native port: YUNG's worldgen as written (#1746), Lithostitched's limited and guaranteed elements with pool and processor modifiers (#1777), its processors as the game's own types (#1765). Proved by the structure blocks and layout harnesses (#1753, #1757). Mods whose Java code does more than world generation don't run (docs/modpacks.md).",
+   "plain": "Making the world-generation mods of popular modpacks (new structures, YUNG's dungeons and mineshafts, packs built on Lithostitched) generate their worlds in Anoma, natively and fast.",
+   "dev": "`anoma-port-pack` carries a pack's data-driven content over; structure mods that need code get a native port: YUNG's worldgen as written (#1746), Lithostitched's limited and guaranteed elements with pool and processor modifiers (#1777), its processors as the game's own types (#1765). Proved by the structure blocks and layout harnesses (#1753, #1757). Mods whose Java code does more than world generation don't run (docs/modpacks.md).",
    "links": [
     "#1746",
     "#1777",
@@ -137,7 +137,7 @@
    "status": "now",
    "area": "servers",
    "plain": "When you play on a server, other players, mobs, items and menus look and behave as in vanilla: skins, poses, item names, inventories and server networks.",
-   "dev": "Client-of-a-server fixes in `game/remote*.rs` and `horizon-protocol`: mobs' aggressive and item-use flags (#1802, #1798), ghost items after a remote menu (#1795), skins (#1652), cookies and transfer packets for proxy networks (#1650), firework boosts (#1671), living-entity attributes and simulation distance (#1731), styled item names (#1702), primed TNT between updates (#1710).",
+   "dev": "Client-of-a-server fixes in `game/remote*.rs` and `anoma-protocol`: mobs' aggressive and item-use flags (#1802, #1798), ghost items after a remote menu (#1795), skins (#1652), cookies and transfer packets for proxy networks (#1650), firework boosts (#1671), living-entity attributes and simulation distance (#1731), styled item names (#1702), primed TNT between updates (#1710).",
    "links": [
     "#1802",
     "#1798",
@@ -171,11 +171,11 @@
   },
   {
    "id": "mod-registry",
-   "title": "Horizon's mod registry",
+   "title": "Anoma's mod registry",
    "status": "now",
    "area": "mods",
-   "plain": "One place for mods, modpacks and resource packs made for Horizon: browse them on the website and install them from the launcher in one click.",
-   "dev": "Merged: the registry index (schema 1, `.hpack`, checks before install, #1634), `cargo horizon-mod check` (#1642) and the submission service (`crates/horizon-mod-registry`, #1659). In review: the website's /mods (#1596) and /mods/submit (#1635), and in the launcher the registry as a source (#1636), install, enable and takedowns (#1637), the Mods page (#1638) and modpacks as their own profiles (#1640).",
+   "plain": "One place for mods, modpacks and resource packs made for Anoma: browse them on the website and install them from the launcher in one click.",
+   "dev": "Merged: the registry index (schema 1, `.hpack`, checks before install, #1634), `cargo anoma-mod check` (#1642) and the submission service (`crates/anoma-mod-registry`, #1659). In review: the website's /mods (#1596) and /mods/submit (#1635), and in the launcher the registry as a source (#1636), install, enable and takedowns (#1637), the Mods page (#1638) and modpacks as their own profiles (#1640).",
    "links": [
     "#1634",
     "#1642",
@@ -196,7 +196,7 @@
    "title": "Server dialogs and login screens",
    "status": "now",
    "area": "servers",
-   "plain": "Servers that show dialogs, such as the register and login screens of AuthMe, will work in Horizon.",
+   "plain": "Servers that show dialogs, such as the register and login screens of AuthMe, will work in Anoma.",
    "dev": "26.3's dialog packets and model (#1720), the dialog screen with its buttons and actions (#1734), then text and boolean inputs (#1735).",
    "links": [
     "#1720",
@@ -224,7 +224,7 @@
    "status": "now",
    "area": "rendering",
    "plain": "Shader packs were removed and are being rebuilt from scratch. They come back, off by default, once the best-known packs draw properly.",
-   "dev": "A clean-room rewrite in `horizon-shaderpack`, from the packs' public format documentation only: reading packs, the preprocessor and `.properties` files are merged (#1584, #1585, #1586); translating programs to WGSL through naga, buffers, uniforms and the terrain, entity, sky, weather and hand stages are in review (#1698 to #1801).",
+   "dev": "A clean-room rewrite in `anoma-shaderpack`, from the packs' public format documentation only: reading packs, the preprocessor and `.properties` files are merged (#1584, #1585, #1586); translating programs to WGSL through naga, buffers, uniforms and the terrain, entity, sky, weather and hand stages are in review (#1698 to #1801).",
    "links": [
     "#1561",
     "#1584",
@@ -241,7 +241,7 @@
    "title": "Discord Rich Presence",
    "status": "now",
    "area": "extras",
-   "plain": "Your Discord profile can show that you are playing Horizon, with a switch to turn it off.",
+   "plain": "Your Discord profile can show that you are playing Anoma, with a switch to turn it off.",
    "dev": "A Discord IPC client on its own thread (#1787) and the presence with its setting (#1788). Merged: it ships with the next release.",
    "links": [
     "#1787",
@@ -254,7 +254,7 @@
    "title": "A leaner codebase that builds faster",
    "status": "now",
    "area": "project",
-   "plain": "Cleaning up Horizon's code: removing what nothing uses and making it quicker to build, so fixes and new features land faster.",
+   "plain": "Cleaning up Anoma's code: removing what nothing uses and making it quicker to build, so fixes and new features land faster.",
    "dev": "A review of the whole tree: dead code and stubs removed (#1432, #1658), one probe binary per crate (#1453, #1454), shared harness helpers (#1448), clippy clean on the whole tree (#1707). docs/architecture.md maps each feature to its files and harnesses.",
    "links": [
     "#1432",
@@ -269,11 +269,11 @@
   },
   {
    "id": "native-shaders",
-   "title": "Horizon's own shader format and kit",
+   "title": "Anoma's own shader format and kit",
    "status": "now",
    "area": "rendering",
-   "plain": "Horizon's own way to make shader packs, with tools to write and test them. Every pack is checked before it runs, and the registry will list them.",
-   "dev": "`horizon-shader-api` (API 0.1, experimental): WGSL stages with typed inputs inside the renderer's passes, options as WGSL override constants, and the `horizon-shader new|check|pack` tool with templates and the example pack Golden Hour. Merged: the check every pack passes (#1820) and the tool, templates and guide (#1822). In review: the post stage running in the game with hot reload (#1861), the sky stage (#1863) and registry checks that use the game's own check (#1855). Left: the material, lighting and shadow stages, a last-good fallback on reload, a GPU-time overlay per stage and budgets (docs/shaders.md, docs/api/shaders.md). The Iris/OptiFine loader is a separate item, 'Shader packs, written again from scratch'.",
+   "plain": "Anoma's own way to make shader packs, with tools to write and test them. Every pack is checked before it runs, and the registry will list them.",
+   "dev": "`anoma-shader-api` (API 0.1, experimental): WGSL stages with typed inputs inside the renderer's passes, options as WGSL override constants, and the `anoma-shader new|check|pack` tool with templates and the example pack Golden Hour. Merged: the check every pack passes (#1820) and the tool, templates and guide (#1822). In review: the post stage running in the game with hot reload (#1861), the sky stage (#1863) and registry checks that use the game's own check (#1855). Left: the material, lighting and shadow stages, a last-good fallback on reload, a GPU-time overlay per stage and budgets (docs/shaders.md, docs/api/shaders.md). The Iris/OptiFine loader is a separate item, 'Shader packs, written again from scratch'.",
    "links": [
     "#1820",
     "#1822",
@@ -315,12 +315,12 @@
    "status": "now",
    "area": "mods",
    "plain": "Better tools for mod makers: a test runner that needs no game window, templates for each kind of mod, and clear promises about what keeps working from one version to the next.",
-   "dev": "`cargo horizon-mod test` runs a mod's test scripts against a fake game snapshot (#1816) and, for server mods, scripted server events (#1837); the content template and the guides are merged (#1859, #1810, docs/api/stability.md). Left: templates for hud, server and machine mods, typed wrappers in the SDK, a frozen 0.1 compatibility mod that every runtime must load, a CI check that fails when a stable reference entry is removed without a new major version, and the SDK on crates.io once the API is stable.",
+   "dev": "`cargo anoma-mod test` runs a mod's test scripts against a fake game snapshot (#1816) and, for server mods, scripted server events (#1837); the content template and the guides are merged (#1859, #1810, docs/api/stability.md). Left: templates for hud, server and machine mods, typed wrappers in the SDK, a frozen 0.1 compatibility mod that every runtime must load, a CI check that fails when a stable reference entry is removed without a new major version, and the SDK on crates.io once the API is stable.",
    "links": [
     "#1816",
     "#1837",
     "docs/api/stability.md",
-    "https://playhorizon.dev/docs/test-a-mod"
+    "https://playanoma.dev/docs/test-a-mod"
    ]
   },
   {
@@ -365,8 +365,8 @@
    "title": "Fresh benchmarks against vanilla",
    "status": "next",
    "area": "performance",
-   "plain": "New public numbers comparing Horizon with vanilla on many kinds of computers, measured the same way every time, with a history that shows what each release changed.",
-   "dev": "Redo the comparison after the current performance work (#1073); reliability, coverage and presentation (#1346); a scene must count as loaded only once its first chunk arrives (#1749). Next: a performance history across releases (an automatic comparison of each release with the last, on a timeline), more report fields (server TPS and MSPT, power, battery drain, temperature, throttling) and more hardware (a MacBook on battery, low-end laptops, community reports). Players' reports come in through `--benchmark` and `horizon-launcher data benchmark` (docs/benchmark.md).",
+   "plain": "New public numbers comparing Anoma with vanilla on many kinds of computers, measured the same way every time, with a history that shows what each release changed.",
+   "dev": "Redo the comparison after the current performance work (#1073); reliability, coverage and presentation (#1346); a scene must count as loaded only once its first chunk arrives (#1749). Next: a performance history across releases (an automatic comparison of each release with the last, on a timeline), more report fields (server TPS and MSPT, power, battery drain, temperature, throttling) and more hardware (a MacBook on battery, low-end laptops, community reports). Players' reports come in through `--benchmark` and `anoma-launcher data benchmark` (docs/benchmark.md).",
    "links": [
     "#1073",
     "#1346",
@@ -391,7 +391,7 @@
   },
   {
    "id": "intel-mac",
-   "title": "Horizon on Intel Macs",
+   "title": "Anoma on Intel Macs",
    "status": "next",
    "area": "platforms",
    "plain": "Builds of the game and the launcher for Macs with an Intel processor.",
@@ -419,8 +419,8 @@
    "title": "Servers that hold 20 TPS with 50 to 100 players",
    "status": "next",
    "area": "performance",
-   "plain": "Servers that keep 20 ticks per second with 50 to 100 players. Today Horizon holds it up to 50 bots and drops to about 10 at 100.",
-   "dev": "Measured against vanilla on equal work (docs/server.md, Scale): Horizon is ahead with few players and when exploring, but vanilla's tick is shorter with 25 to 50 players near spawn. Ideas on the list: send entity changes instead of rebuilding every entity each tick (about 15 percent), fewer memory reads in random ticks and collision scans, cheaper item collision checks, mob AI and natural spawning. The bot benchmark (`horizon-bots`) is the proof.",
+   "plain": "Servers that keep 20 ticks per second with 50 to 100 players. Today Anoma holds it up to 50 bots and drops to about 10 at 100.",
+   "dev": "Measured against vanilla on equal work (docs/server.md, Scale): Anoma is ahead with few players and when exploring, but vanilla's tick is shorter with 25 to 50 players near spawn. Ideas on the list: send entity changes instead of rebuilding every entity each tick (about 15 percent), fewer memory reads in random ticks and collision scans, cheaper item collision checks, mob AI and natural spawning. The bot benchmark (`anoma-bots`) is the proof.",
    "links": [
     "docs/server.md"
    ]
@@ -430,11 +430,11 @@
    "title": "Low-end computers: Steam Deck, old Macs, 8 GB",
    "status": "next",
    "area": "performance",
-   "plain": "Horizon should run well on small machines: integrated graphics, the Steam Deck, older Macs and 8 GB of memory, with a battery mode that saves power on laptops.",
+   "plain": "Anoma should run well on small machines: integrated graphics, the Steam Deck, older Macs and 8 GB of memory, with a battery mode that saves power on laptops.",
    "dev": "Partly done: an opt-in 60 FPS cap with fewer workers on battery, Far Detail Reduced for integrated GPUs and animated textures on the GPU (both shipped). Left: measured targets and fixes per class of machine (memory use, worker counts, startup) on a Steam Deck, old Intel and Apple Silicon Macs and 8 GB computers, reported on the Benchmarks page.",
    "links": [
     "docs/benchmark.md",
-    "https://playhorizon.dev/docs/performance"
+    "https://playanoma.dev/docs/performance"
    ]
   },
   {
@@ -465,8 +465,8 @@
    "title": "A Convert to Rust button for what isn't rewritten yet",
    "status": "next",
    "area": "modpacks",
-   "plain": "When a mod, shader pack or modpack hasn't been rewritten for Horizon, one button converts what can be converted, so you don't have to wait for the rewrite.",
-   "dev": "Generalise the mod browser's Port step (`horizon-port-pack`: the data, assets, worldgen and block and item definitions of Java mods, .mrpack and CurseForge zips) to every kind of content: code mods where the API allows it (see 'Mods with code') and shader packs, converting an Iris/OptiFine pack into Horizon's format. The browser says what works before the install. Java code itself does not run (docs/modpacks.md, docs/mod-browser.md).",
+   "plain": "When a mod, shader pack or modpack hasn't been rewritten for Anoma, one button converts what can be converted, so you don't have to wait for the rewrite.",
+   "dev": "Generalise the mod browser's Port step (`anoma-port-pack`: the data, assets, worldgen and block and item definitions of Java mods, .mrpack and CurseForge zips) to every kind of content: code mods where the API allows it (see 'Mods with code') and shader packs, converting an Iris/OptiFine pack into Anoma's format. The browser says what works before the install. Java code itself does not run (docs/modpacks.md, docs/mod-browser.md).",
    "links": [
     "docs/modpacks.md",
     "docs/mod-browser.md"
@@ -477,7 +477,7 @@
    "title": "Mods with code: machines, magic, mobs",
    "status": "next",
    "area": "modpacks",
-   "plain": "Making mods that add machines, magic and mobs work in Horizon, in steps, starting with machines. They are most of what a big modpack is made of.",
+   "plain": "Making mods that add machines, magic and mobs work in Anoma, in steps, starting with machines. They are most of what a big modpack is made of.",
    "dev": "333 of the 496 mods in a big pack (ATM10) contain code. Issue #1854 ranks the API gaps (ticking block entities, networking, rendering, menus, inventories) that unlock them in tiers, with machines first as the recommended path and a furnace ported tick for tick as proof. The first API step is a draft (#1189, see 'Machines and blocks with inventories'). The path isn't started yet (docs/modpacks.md).",
    "links": [
     "#1854",
@@ -490,7 +490,7 @@
    "status": "next",
    "area": "modpacks",
    "plain": "Search and install data packs from the launcher's mod browser, for the world you choose, as you do mods and resource packs.",
-   "dev": "A Datapacks tab beside Mods and Resource packs: install into a chosen world's datapacks folder, with the same checks and 'works in Horizon' notes as the other kinds (docs/mod-browser.md).",
+   "dev": "A Datapacks tab beside Mods and Resource packs: install into a chosen world's datapacks folder, with the same checks and 'works in Anoma' notes as the other kinds (docs/mod-browser.md).",
    "links": [
     "docs/mod-browser.md"
    ]
@@ -500,8 +500,8 @@
    "title": "Prepare a version without Java",
    "status": "next",
    "area": "servers",
-   "plain": "Set up Horizon, a server first, without Java on your computer: published tables are combined with your own copy of the game.",
-   "dev": "Today `horizon-prepare` runs Mojang's exporters with Java. Issue #1750 proposes publishing the computed version tables once from CI and assembling the rest locally from the player's own jar and assets, provided the tables hold no Mojang content; a contributor offered a pull request, and it would help phones too. A server-only prepare from `server.jar` alone is the first step (docs/server.md).",
+   "plain": "Set up Anoma, a server first, without Java on your computer: published tables are combined with your own copy of the game.",
+   "dev": "Today `anoma-prepare` runs Mojang's exporters with Java. Issue #1750 proposes publishing the computed version tables once from CI and assembling the rest locally from the player's own jar and assets, provided the tables hold no Mojang content; a contributor offered a pull request, and it would help phones too. A server-only prepare from `server.jar` alone is the first step (docs/server.md).",
    "links": [
     "#1750",
     "docs/server.md"
@@ -513,7 +513,7 @@
    "status": "next",
    "area": "servers",
    "plain": "Manage a server from a console, ban and pardon players, and drive it from other tools through a full admin API and an MCP server for AI agents.",
-   "dev": "`horizon-server console` (a text interface), `ban`, `pardon`, `ban-ip` and `mcp` over stdio. Admin API additions: the player list, kick, ban, op and whitelist, an SSE stream of logs and events, a text metrics endpoint, config GET and PATCH, backup delete and download. The panel's later features (bans, worlds, server.properties import, logs and crash reports, modpacks) and vanilla's management protocol (the JSON-RPC over WebSocket that the `management-server-*` keys configure), so vanilla's tools can manage a Horizon server. docs/server.md, docs/api/server.md.",
+   "dev": "`anoma-server console` (a text interface), `ban`, `pardon`, `ban-ip` and `mcp` over stdio. Admin API additions: the player list, kick, ban, op and whitelist, an SSE stream of logs and events, a text metrics endpoint, config GET and PATCH, backup delete and download. The panel's later features (bans, worlds, server.properties import, logs and crash reports, modpacks) and vanilla's management protocol (the JSON-RPC over WebSocket that the `management-server-*` keys configure), so vanilla's tools can manage a Anoma server. docs/server.md, docs/api/server.md.",
    "links": [
     "docs/server.md",
     "docs/api/server.md"
@@ -548,8 +548,8 @@
    "title": "An official Docker image for servers",
    "status": "next",
    "area": "servers",
-   "plain": "An official image to run a Horizon dedicated server in Docker with one command, your own copy of the game files mounted in.",
-   "dev": "The repository has the Dockerfile (`packaging/server/Dockerfile`: a multi-stage build on Debian bookworm-slim, user `horizon`, volume `/data`, port 25565, game files mounted read-only, `HORIZON_EULA` and friends answering the first-start questions), and anyone can build it (docs/hosting.md, section 9). Left: publish the image to a public registry from the release workflow, tagged per release, so it follows the same checks, and update the docs and the launcher. The image never holds Mojang's files.",
+   "plain": "An official image to run a Anoma dedicated server in Docker with one command, your own copy of the game files mounted in.",
+   "dev": "The repository has the Dockerfile (`packaging/server/Dockerfile`: a multi-stage build on Debian bookworm-slim, user `anoma`, volume `/data`, port 25565, game files mounted read-only, `ANOMA_EULA` and friends answering the first-start questions), and anyone can build it (docs/hosting.md, section 9). Left: publish the image to a public registry from the release workflow, tagged per release, so it follows the same checks, and update the docs and the launcher. The image never holds Mojang's files.",
    "links": [
     "docs/hosting.md",
     "docs/server.md"
@@ -561,7 +561,7 @@
    "status": "next",
    "area": "gameplay",
    "plain": "Single player will have one way to run, the server thread, so every fix works everywhere and there are fewer bugs. The older in-frame mode goes once everything passes without it.",
-   "dev": "`--in-frame` (also `--no-server-thread` and `HORIZON_SERVER_THREAD=0`) still ticks the world inside the window's `Game`, and most harnesses test that path. Delete it once `lan_e2e --server-thread` and the parity harnesses pass on the server thread, which also halves the bug surface. See also 'Single player as a server' and docs/server-levels.md.",
+   "dev": "`--in-frame` (also `--no-server-thread` and `ANOMA_SERVER_THREAD=0`) still ticks the world inside the window's `Game`, and most harnesses test that path. Delete it once `lan_e2e --server-thread` and the parity harnesses pass on the server thread, which also halves the bug surface. See also 'Single player as a server' and docs/server-levels.md.",
    "links": [
     "docs/server-levels.md"
    ]
@@ -583,7 +583,7 @@
    "title": "Choose the audio output device",
    "status": "next",
    "area": "gameplay",
-   "plain": "Pick the speakers or headphones Horizon plays through, in Music & Sounds.",
+   "plain": "Pick the speakers or headphones Anoma plays through, in Music & Sounds.",
    "dev": "An output device list in Music & Sounds, falling back to the system default. #1035 started it: a player on an older Windows computer had no sound at all, and a device choice is how such cases are found and fixed.",
    "links": [
     "#1035"
@@ -619,21 +619,21 @@
    "status": "next",
    "area": "mods",
    "plain": "Write mods as Lua scripts, in the style of KubeJS, with no compiler, and later in other languages that pass the tests. Every language runs in the same sandbox.",
-   "dev": "Lua first: Horizon ships a Lua interpreter that is itself a WebAssembly mod, and a script mod's manifest names it and the capabilities it uses, so a script can do exactly what a compiled mod with the same manifest can, with hot reload of `main.lua`. Then C, C++, Zig, Go (TinyGo), AssemblyScript and JavaScript or TypeScript are measured against Rust on the same tick-heavy example, and each is supported only with a template, an example and a CI test. docs/api/mods.md ('Ways in').",
+   "dev": "Lua first: Anoma ships a Lua interpreter that is itself a WebAssembly mod, and a script mod's manifest names it and the capabilities it uses, so a script can do exactly what a compiled mod with the same manifest can, with hot reload of `main.lua`. Then C, C++, Zig, Go (TinyGo), AssemblyScript and JavaScript or TypeScript are measured against Rust on the same tick-heavy example, and each is supported only with a template, an example and a CI test. docs/api/mods.md ('Ways in').",
    "links": [
     "docs/api/mods.md"
    ]
   },
   {
    "id": "shader-pack-examples",
-   "title": "Well-known shader looks, rewritten for Horizon",
+   "title": "Well-known shader looks, rewritten for Anoma",
    "status": "next",
    "area": "rendering",
-   "plain": "Popular shader packs rewritten in Horizon's format, so good packs exist from the start. Only packs whose licence is open source and compatible with ours are rewritten, never anything else.",
-   "dev": "The first candidates are Photon, Chocapic13 and MakeUp Ultra Fast, each only after its licence is read and recorded: a pack is rewritten only if it is open source and compatible with Horizon's licence, and the rewrite is written from the shader format's documentation and the look on screen, not from anyone's code. Today only the Golden Hour example exists (`crates/horizon-shader-api/packs/golden_hour`).",
+   "plain": "Popular shader packs rewritten in Anoma's format, so good packs exist from the start. Only packs whose licence is open source and compatible with ours are rewritten, never anything else.",
+   "dev": "The first candidates are Photon, Chocapic13 and MakeUp Ultra Fast, each only after its licence is read and recorded: a pack is rewritten only if it is open source and compatible with Anoma's licence, and the rewrite is written from the shader format's documentation and the look on screen, not from anyone's code. Today only the Golden Hour example exists (`crates/anoma-shader-api/packs/golden_hour`).",
    "links": [
     "docs/shaders.md",
-    "crates/horizon-shader-api/packs/golden_hour"
+    "crates/anoma-shader-api/packs/golden_hour"
    ]
   },
   {
@@ -641,7 +641,7 @@
    "title": "A visible beta label",
    "status": "next",
    "area": "launcher",
-   "plain": "A clear 'beta' label in the launcher and the game, so nobody is surprised that Horizon is still being built.",
+   "plain": "A clear 'beta' label in the launcher and the game, so nobody is surprised that Anoma is still being built.",
    "dev": "Show Beta in the launcher's header and about page, on the game's title screen and on the website, beside the version number (docs/versioning.md).",
    "links": [
     "docs/versioning.md"
@@ -663,8 +663,8 @@
    "title": "A versioned agent-control protocol",
    "status": "next",
    "area": "ai",
-   "plain": "A stable, documented way for AI agents and scripts to drive the game and the launcher, with versions and an event stream so tools keep working as Horizon changes.",
-   "dev": "`hello` answers with the API version, the release and the features; `horizon-ctl --api`; MCP serverInfo; reply schemas generated into the reference; a `test.` namespace for hooks; transcript compatibility tests; `subscribe` as a stream of events on one connection; Horizon option files by key and saved-server commands. Agent control itself (`horizon-ctl`, both MCP servers, the No AI switch) is done: docs/agent-control.md, docs/api/agent-control.md.",
+   "plain": "A stable, documented way for AI agents and scripts to drive the game and the launcher, with versions and an event stream so tools keep working as Anoma changes.",
+   "dev": "`hello` answers with the API version, the release and the features; `anoma-ctl --api`; MCP serverInfo; reply schemas generated into the reference; a `test.` namespace for hooks; transcript compatibility tests; `subscribe` as a stream of events on one connection; Anoma option files by key and saved-server commands. Agent control itself (`anoma-ctl`, both MCP servers, the No AI switch) is done: docs/agent-control.md, docs/api/agent-control.md.",
    "links": [
     "docs/agent-control.md",
     "docs/api/agent-control.md",
@@ -676,20 +676,20 @@
    "title": "Port mods with your own AI agent",
    "status": "next",
    "area": "ai",
-   "plain": "You can port a mod to Horizon with your own AI agent on your own computer. Horizon documents how and gives you the tools, but provides no hosted agents.",
-   "dev": "A player runs their own agent locally with `horizon-ctl` and the MCP servers (docs/agent-control.md), `cargo horizon-mod`, `horizon-port-pack` and the parity harnesses as the check. Horizon writes the guide (playhorizon.dev/docs/agents, docs/modpacks.md) and runs no agents, accounts or keys for players. The No AI switch turns all of it off.",
+   "plain": "You can port a mod to Anoma with your own AI agent on your own computer. Anoma documents how and gives you the tools, but provides no hosted agents.",
+   "dev": "A player runs their own agent locally with `anoma-ctl` and the MCP servers (docs/agent-control.md), `cargo anoma-mod`, `anoma-port-pack` and the parity harnesses as the check. Anoma writes the guide (playanoma.dev/docs/agents, docs/modpacks.md) and runs no agents, accounts or keys for players. The No AI switch turns all of it off.",
    "links": [
-    "https://playhorizon.dev/docs/agents",
+    "https://playanoma.dev/docs/agents",
     "docs/modpacks.md",
     "docs/agent-control.md"
    ]
   },
   {
    "id": "x-account",
-   "title": "Horizon on X (coming soon)",
+   "title": "Anoma on X (coming soon)",
    "status": "next",
    "area": "community",
-   "plain": "Coming soon: an official Horizon account on X, used to announce releases and the weekly summary.",
+   "plain": "Coming soon: an official Anoma account on X, used to announce releases and the weekly summary.",
    "dev": "Kira already posts the roadmap items marked `announce = true` when they ship, and the weekly summary, as soon as the account's credentials exist (roadmap/README.md, 'The journal'). Waiting for the account itself.",
    "links": [
     "roadmap/README.md"
@@ -701,7 +701,7 @@
    "status": "next",
    "area": "project",
    "plain": "Safer releases: changes to the release machinery need the owner's review, and AI agents use a smaller identity of their own instead of a personal account.",
-   "dev": "`.github/CODEOWNERS` lists the workflows, the release and signing tools, the update-checking code and the installers (#1015); the branch protection that makes it count waits for the `horizon-agent` GitHub App, which reads and writes code, pull requests and issues but can't change settings, workflows, secrets or members, and whose tokens last an hour. It needs the owner to create the App and switch the protection on (docs/security.md).",
+   "dev": "`.github/CODEOWNERS` lists the workflows, the release and signing tools, the update-checking code and the installers (#1015); the branch protection that makes it count waits for the `anoma-agent` GitHub App, which reads and writes code, pull requests and issues but can't change settings, workflows, secrets or members, and whose tokens last an hour. It needs the owner to create the App and switch the protection on (docs/security.md).",
    "links": [
     "docs/security.md"
    ]
@@ -711,8 +711,8 @@
    "title": "Signed updates everywhere, installers included",
    "status": "next",
    "area": "project",
-   "plain": "Every download Horizon makes is checked against the project's signature, including the first install with install.sh and install.ps1.",
-   "dev": "Releases carry signed checksums, and the launcher and `horizon-server update` refuse anything unsigned (#1011, #1014). Left: the first install through `install.sh` and `install.ps1` still trusts only the checksum GitHub publishes, because verifying Ed25519 signatures needs OpenSSL 3, which macOS doesn't ship (docs/security.md).",
+   "plain": "Every download Anoma makes is checked against the project's signature, including the first install with install.sh and install.ps1.",
+   "dev": "Releases carry signed checksums, and the launcher and `anoma-server update` refuse anything unsigned (#1011, #1014). Left: the first install through `install.sh` and `install.ps1` still trusts only the checksum GitHub publishes, because verifying Ed25519 signatures needs OpenSSL 3, which macOS doesn't ship (docs/security.md).",
    "links": [
     "docs/security.md"
    ]
@@ -735,7 +735,7 @@
    "title": "Every Minecraft version, prepared automatically",
    "status": "later",
    "area": "gameplay",
-   "plain": "Every past and future Minecraft version prepared for Horizon automatically. When Mojang releases one, Horizon follows it, and every system is checked against it again.",
+   "plain": "Every past and future Minecraft version prepared for Anoma automatically. When Mojang releases one, Anoma follows it, and every system is checked against it again.",
    "dev": "The port pipeline (docs/version-ports.md, `tools/version_port.py`) detects a release, prepares it, diffs its classes against the pinned 26.3, regenerates the data-driven tables, runs every parity harness on it and writes a port report that becomes issues. The goal is as little human work as possible for any version, past or future. Detection and the first slices are merged; the scheduled agent that runs it every day isn't installed yet. Two versions in one build are out of scope.",
    "links": [
     "docs/version-ports.md"
@@ -768,7 +768,7 @@
    "title": "A modpack's own resource and shader packs",
    "status": "later",
    "area": "modpacks",
-   "plain": "Importing a modpack also brings the resource packs and shader packs it ships with, where Horizon can use them.",
+   "plain": "Importing a modpack also brings the resource packs and shader packs it ships with, where Anoma can use them.",
    "dev": "Porting a pack carries data, assets and worldgen today; the resource packs and shader packs bundled with it are left out. Resource packs can be carried as they are; shader packs go through the converter (docs/modpacks.md).",
    "links": [
     "docs/modpacks.md"
@@ -779,7 +779,7 @@
    "title": "Whole modpacks, such as ATM10, rewritten",
    "status": "later",
    "area": "modpacks",
-   "plain": "Rewriting a complete big modpack for Horizon so it runs far better than the original. Not a priority now: the work above comes first.",
+   "plain": "Rewriting a complete big modpack for Anoma so it runs far better than the original. Not a priority now: the work above comes first.",
    "dev": "The project's first goal for modpacks: support them ten times better than vanilla and port any of them. It was set aside in favour of compatibility through the browser. What exists: ATM10's world generates and 42 of its 496 mods are carried at least in part (docs/modpacks.md). It depends on 'Mods with code' and the native mod API.",
    "links": [
     "docs/modpacks.md"
@@ -790,7 +790,7 @@
    "title": "Running Java mods that aren't rewritten",
    "status": "later",
    "area": "modpacks",
-   "plain": "Run Java mods that nobody has rewritten for Horizon yet, through a bridge or a converter. Hard and not started: the Convert button and native rewrites come first.",
+   "plain": "Run Java mods that nobody has rewritten for Anoma yet, through a bridge or a converter. Hard and not started: the Convert button and native rewrites come first.",
    "dev": "Earlier research (#527, closed) found that Java mods can't simply run, because they call Minecraft's own classes. Options to look at again: a jar-to-WebAssembly backend, or a bridge for simple Fabric mods. Whatever is chosen has to run inside the same sandbox and capability checks as native mods.",
    "links": [
     "#527"
@@ -824,7 +824,7 @@
    "title": "Orbital Laser on the normal game",
    "status": "later",
    "area": "mods",
-   "plain": "The community mod Orbital Laser, made for a fork of Horizon, running on the normal game and listed in the registry as the showcase of the mod API.",
+   "plain": "The community mod Orbital Laser, made for a fork of Anoma, running on the normal game and listed in the registry as the showcase of the mod API.",
    "dev": "A pull request on https://github.com/Stink-O/orbital-laser (MIT) once the input, ui, render and world capabilities exist (see 'Screens, input and drawing for mods'): today the mod needs them through its author's fork. Tested in the game, and listed in the registry.",
    "links": [
     "https://github.com/Stink-O/orbital-laser"
@@ -847,8 +847,8 @@
    "title": "Create-style physics as a native mod",
    "status": "later",
    "area": "mods",
-   "plain": "Contraptions and physics like the Create and Aeronautics mods, as a mod for Horizon rather than part of the base game.",
-   "dev": "Issue #805 (porting QOL mods) closed with this answer: it would come as a native Horizon mod on the mod API. It needs server mods, entities and rendering first.",
+   "plain": "Contraptions and physics like the Create and Aeronautics mods, as a mod for Anoma rather than part of the base game.",
+   "dev": "Issue #805 (porting QOL mods) closed with this answer: it would come as a native Anoma mod on the mod API. It needs server mods, entities and rendering first.",
    "links": [
     "#805"
    ]
@@ -858,7 +858,7 @@
    "title": "Proximity voice chat as a native mod",
    "status": "later",
    "area": "mods",
-   "plain": "Hear nearby players talk, as with the voice chat mods of other Minecraft versions, as a Horizon mod.",
+   "plain": "Hear nearby players talk, as with the voice chat mods of other Minecraft versions, as a Anoma mod.",
    "dev": "Needs server mods, mod networking and an audio interface in the mod API before anything can be built (docs/api/mods.md).",
    "links": [
     "docs/api/mods.md"
@@ -902,7 +902,7 @@
    "title": "MSAA, anisotropic filtering, exclusive fullscreen",
    "status": "later",
    "area": "rendering",
-   "plain": "More graphics options: multisample anti-aliasing, anisotropic filtering and an exclusive fullscreen mode. Today Horizon has FXAA and borderless fullscreen.",
+   "plain": "More graphics options: multisample anti-aliasing, anisotropic filtering and an exclusive fullscreen mode. Today Anoma has FXAA and borderless fullscreen.",
    "dev": "Not implemented (docs/graphics.md). Anisotropic filtering needs linear magnification in wgpu, which blurs close blocks, so close-up sharpness has to be kept first; MSAA would sit beside FXAA; exclusive fullscreen where the backend supports it.",
    "links": [
     "docs/graphics.md"
@@ -913,7 +913,7 @@
    "title": "A complete video studio inside the game",
    "status": "later",
    "area": "extras",
-   "plain": "Record, replay and edit videos without leaving the game: record in a keypress, replay a session, cut and finish the video. One of Horizon's original goals.",
+   "plain": "Record, replay and edit videos without leaving the game: record in a keypress, replay a session, cut and finish the video. One of Anoma's original goals.",
    "dev": "Three stages. Recording: capture gameplay in a keypress with an encoder thread and little frame-time cost. Replay: a replay mode for recorded sessions. Editing: cuts, camera paths, titles and export. None of it exists yet; the agent-control socket (docs/agent-control.md) already lets tools drive the game for scripted shots.",
    "links": [
     "docs/agent-control.md"
@@ -947,12 +947,12 @@
    "title": "Lean installs that use less disk",
    "status": "later",
    "area": "launcher",
-   "plain": "Smaller installs: Horizon keeps one shared copy of the prepared game files and removes what only the preparation needed.",
+   "plain": "Smaller installs: Anoma keeps one shared copy of the prepared game files and removes what only the preparation needed.",
    "dev": "A shared resource store keyed by the preparer's digest, no prepare intermediates left behind, the current and the previous version kept, and an automatic clean-up. Not started."
   },
   {
    "id": "linux-arm64",
-   "title": "Horizon on Linux ARM64",
+   "title": "Anoma on Linux ARM64",
    "status": "later",
    "area": "platforms",
    "plain": "Game and launcher builds for 64-bit ARM Linux computers.",
@@ -966,7 +966,7 @@
    "title": "OpenGL for old computers",
    "status": "shipped",
    "area": "platforms",
-   "plain": "Horizon now starts on old PCs whose graphics card has no Vulkan or DirectX 12 driver: it switches to OpenGL by itself, and Options > Graphics can pick OpenGL by hand.",
+   "plain": "Anoma now starts on old PCs whose graphics card has no Vulkan or DirectX 12 driver: it switches to OpenGL by itself, and Options > Graphics can pick OpenGL by hand.",
    "dev": "wgpu's GL backend (WGL on Windows, EGL on Linux) as the last fallback after Vulkan and DirectX 12 (#1917), sprite arrays and CPU sprite animation for drivers without compute (#1920), no indirect draws below GL 4.3 (#1936). Minimum OpenGL 3.3 core. Shader packs don't run on it yet.",
    "links": [
     "#1917",
@@ -980,8 +980,8 @@
    "title": "Android, iOS and the browser",
    "status": "later",
    "area": "platforms",
-   "plain": "Versions of Horizon for Android, iOS and web browsers. Nothing official yet; contributors have started the first pieces.",
-   "dev": "No official build. Android was first closed as not planned, with touch controls, a mobile interface, packaging and loading the player's own assets all missing; the roadmap now includes it, iOS and a WebAssembly build for the browser as long-term goals. First pieces from contributors: `horizon-dualsense` compiling on iOS (#1813) and helper-thread limits on Android (#1751). Preparing without Java (#1750) matters here too. Horizon ships none of Mojang's files on any platform.",
+   "plain": "Versions of Anoma for Android, iOS and web browsers. Nothing official yet; contributors have started the first pieces.",
+   "dev": "No official build. Android was first closed as not planned, with touch controls, a mobile interface, packaging and loading the player's own assets all missing; the roadmap now includes it, iOS and a WebAssembly build for the browser as long-term goals. First pieces from contributors: `anoma-dualsense` compiling on iOS (#1813) and helper-thread limits on Android (#1751). Preparing without Java (#1750) matters here too. Anoma ships none of Mojang's files on any platform.",
    "links": [
     "#1813",
     "#1751"
@@ -989,10 +989,10 @@
   },
   {
    "id": "video-series",
-   "title": "A video series about Horizon",
+   "title": "A video series about Anoma",
    "status": "later",
    "area": "community",
-   "plain": "A series of videos about how Horizon is made and what is new, with each upload announced on Discord.",
+   "plain": "A series of videos about how Anoma is made and what is new, with each upload announced on Discord.",
    "dev": "Kira already shows new uploads in a read-only Discord channel (done). The series follows each stage of the project: a script, edits, titles and a thumbnail per video."
   },
   {
@@ -1000,10 +1000,10 @@
    "title": "Benchmark your computer",
    "status": "help-wanted",
    "area": "performance",
-   "plain": "Run Horizon's built-in benchmark and share the report: every new computer makes the performance work more accurate. No coding needed.",
-   "dev": "`horizon-launcher play --arg=--benchmark --arg=standard` writes a JSON report; `horizon-launcher data benchmark <report>` shows what would be sent and uploads it (playhorizon.dev/docs/performance). Results from three installs with the same hardware appear on the Benchmarks page. Example: #1711.",
+   "plain": "Run Anoma's built-in benchmark and share the report: every new computer makes the performance work more accurate. No coding needed.",
+   "dev": "`anoma-launcher play --arg=--benchmark --arg=standard` writes a JSON report; `anoma-launcher data benchmark <report>` shows what would be sent and uploads it (playanoma.dev/docs/performance). Results from three installs with the same hardware appear on the Benchmarks page. Example: #1711.",
    "links": [
-    "https://playhorizon.dev/docs/performance",
+    "https://playanoma.dev/docs/performance",
     "#1711"
    ]
   },
@@ -1013,7 +1013,7 @@
    "status": "help-wanted",
    "area": "gameplay",
    "plain": "Banners in End cities show as plain magenta instead of with their pattern.",
-   "dev": "Compare the banner block entities the End city templates place with vanilla's (`EndCityPieces`, the templates' block entity NBT, `BannerBlockEntity`'s patterns), in `crates/horizon-world/src/worldgen/structure/`. Issue #1438; possibly related: #526.",
+   "dev": "Compare the banner block entities the End city templates place with vanilla's (`EndCityPieces`, the templates' block entity NBT, `BannerBlockEntity`'s patterns), in `crates/anoma-world/src/worldgen/structure/`. Issue #1438; possibly related: #526.",
    "links": [
     "#1438",
     "#526"
@@ -1100,7 +1100,7 @@
    "title": "Server resource packs",
    "status": "shipped",
    "area": "servers",
-   "plain": "Servers can send you their resource pack: Horizon asks, downloads it and applies it, like vanilla.",
+   "plain": "Servers can send you their resource pack: Anoma asks, downloads it and applies it, like vanilla.",
    "dev": "The dedicated server offers server.properties' pack (#1562); the client's pack manager, downloads, prompt and Server Resource Packs setting (#1569, #1570).",
    "links": [
     "#1562",
@@ -1164,7 +1164,7 @@
    "title": "The launcher's mod browser",
    "status": "shipped",
    "area": "modpacks",
-   "plain": "Search Modrinth for mods, modpacks and resource packs from the launcher; it says before installing what works in Horizon.",
+   "plain": "Search Modrinth for mods, modpacks and resource packs from the launcher; it says before installing what works in Anoma.",
    "dev": "The Mods page (#1154), Java mods checked before install (#1242), project pages, filters and galleries (#1243), modpacks ported in the same step (#1246). docs/mod-browser.md.",
    "links": [
     "#1154",
@@ -1180,8 +1180,8 @@
    "title": "A blocky, Minecraft-like launcher",
    "status": "shipped",
    "area": "launcher",
-   "plain": "The launcher got a new blocky look in Horizon's purple, in dark and light.",
-   "dev": "The Blocks look (#1269), from `horizon-theme` (docs/design-system.md).",
+   "plain": "The launcher got a new blocky look in Anoma's purple, in dark and light.",
+   "dev": "The Blocks look (#1269), from `anoma-theme` (docs/design-system.md).",
    "links": [
     "#1269",
     "docs/design-system.md"
@@ -1194,7 +1194,7 @@
    "status": "shipped",
    "area": "extras",
    "plain": "An optional extra: torches you hold, drop or set on fire light up what is around them.",
-   "dev": "Held, dropped and burning light sources (#1162), in Horizon Extras, off by default.",
+   "dev": "Held, dropped and burning light sources (#1162), in Anoma Extras, off by default.",
    "links": [
     "#1162"
    ],
@@ -1205,8 +1205,8 @@
    "title": "Host a server from the launcher",
    "status": "shipped",
    "area": "servers",
-   "plain": "The launcher's Servers page creates, starts, backs up and updates a Horizon server with buttons, and invites friends.",
-   "dev": "The launcher's Servers page (#1026) over `horizon-server` (docs/hosting.md).",
+   "plain": "The launcher's Servers page creates, starts, backs up and updates a Anoma server with buttons, and invites friends.",
+   "dev": "The launcher's Servers page (#1026) over `anoma-server` (docs/hosting.md).",
    "links": [
     "#1026",
     "docs/hosting.md"
@@ -1218,8 +1218,8 @@
    "title": "A server you install with one command",
    "status": "next",
    "area": "servers",
-   "plain": "Install and run a Horizon dedicated server from a terminal with a single command, no launcher needed, for VPSes and headless machines.",
-   "dev": "A player's idea (#horizon-ideas). `horizon-server` already runs headless; left: an install script (Linux/macOS shell, Windows PowerShell) that fetches the signed release, checks it, asks for or points at the player's own game files and starts the server, documented in docs/hosting.md.",
+   "plain": "Install and run a Anoma dedicated server from a terminal with a single command, no launcher needed, for VPSes and headless machines.",
+   "dev": "A player's idea (#anoma-ideas). `anoma-server` already runs headless; left: an install script (Linux/macOS shell, Windows PowerShell) that fetches the signed release, checks it, asks for or points at the player's own game files and starts the server, documented in docs/hosting.md.",
    "links": [
     "docs/hosting.md"
    ]
@@ -1229,8 +1229,8 @@
    "title": "Game menus in the launcher's style",
    "status": "later",
    "area": "extras",
-   "plain": "An optional look for the game's own menus and options that matches the Horizon launcher. Off by default: the vanilla menus stay as they are.",
-   "dev": "A player's idea (#horizon-ideas). A built-in resource pack or a Horizon setting that restyles the title, pause and options screens with the launcher's design tokens (crates/horizon-theme), following docs/design-system.md; off by default because it changes the vanilla look.",
+   "plain": "An optional look for the game's own menus and options that matches the Anoma launcher. Off by default: the vanilla menus stay as they are.",
+   "dev": "A player's idea (#anoma-ideas). A built-in resource pack or a Anoma setting that restyles the title, pause and options screens with the launcher's design tokens (crates/anoma-theme), following docs/design-system.md; off by default because it changes the vanilla look.",
    "links": [
     "docs/design-system.md"
    ]
@@ -1240,8 +1240,8 @@
    "title": "AppImage and a Nix flake",
    "status": "later",
    "area": "platforms",
-   "plain": "Install Horizon on any Linux distribution as an AppImage, and on NixOS through a Nix flake.",
-   "dev": "A player's idea (#horizon-ideas). An AppImage of the launcher and game from the release workflow, and a flake.nix packaging the release binaries with their runtime libraries (Vulkan loader, X11/Wayland, ALSA), the way horizon-parity's NixOS setup runs them today.",
+   "plain": "Install Anoma on any Linux distribution as an AppImage, and on NixOS through a Nix flake.",
+   "dev": "A player's idea (#anoma-ideas). An AppImage of the launcher and game from the release workflow, and a flake.nix packaging the release binaries with their runtime libraries (Vulkan loader, X11/Wayland, ALSA), the way anoma-parity's NixOS setup runs them today.",
    "links": []
   }
  ],
@@ -1250,8 +1250,8 @@
    "week": "2026-43",
    "date": "2026-10-19",
    "title": "Single player becomes a server, servers send their packs",
-   "plain": "Single player now runs on its own server thread, as vanilla does, and a run of fixes made shields, tridents, elytra, maps, fishing, signs and books work there and for every server player. Servers can send you their resource packs, the launcher got its blocky new look, and the first pieces of Horizon's mod registry landed. Shader packs were taken out, to come back written from scratch.",
-   "dev": "The server thread became the default (#1514), after guests and server-thread players reached parity: totems (#1463), death drops (#1464), signs and books (#1465, #1466), shields, tridents, crossbows and spyglasses (#1476), elytra (#1475), maps (#1510), fishing (#1509), wind charges (#1508), strikes and mob effects (#1512), the cursor stack on close (#1513). Server resource packs: the dedicated server offers them (#1562) and the client downloads, asks and applies them (#1569, #1570). Mod registry: index schema 1 and `.hpack` (#1634), `cargo horizon-mod check` (#1642), the submission service (#1659). Shader packs were removed (#1561) and the clean-room rewrite started from the format's documentation (#1584 onward). Releases now ship in batches of five pull requests, or six hours after the oldest (#1554)."
+   "plain": "Single player now runs on its own server thread, as vanilla does, and a run of fixes made shields, tridents, elytra, maps, fishing, signs and books work there and for every server player. Servers can send you their resource packs, the launcher got its blocky new look, and the first pieces of Anoma's mod registry landed. Shader packs were taken out, to come back written from scratch.",
+   "dev": "The server thread became the default (#1514), after guests and server-thread players reached parity: totems (#1463), death drops (#1464), signs and books (#1465, #1466), shields, tridents, crossbows and spyglasses (#1476), elytra (#1475), maps (#1510), fishing (#1509), wind charges (#1508), strikes and mob effects (#1512), the cursor stack on close (#1513). Server resource packs: the dedicated server offers them (#1562) and the client downloads, asks and applies them (#1569, #1570). Mod registry: index schema 1 and `.hpack` (#1634), `cargo anoma-mod check` (#1642), the submission service (#1659). Shader packs were removed (#1561) and the clean-room rewrite started from the format's documentation (#1584 onward). Releases now ship in batches of five pull requests, or six hours after the oldest (#1554)."
   }
  ]
 }

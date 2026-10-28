@@ -180,9 +180,9 @@ def main():
              'turn the player: the real LocalPlayer.applyInput moves xBob and yBob, the hands\' lag behind the view.')
     harness.differential(
         'rust-first-person-parity', 'VanillaFirstPersonOracle', 'first_person_probe', make_cases, scope,
-        sources=[lab.ROOT / 'crates/horizon-client/src/first_person.rs', lab.ROOT / 'crates/horizon-client/src/attack_strength.rs',
-                 lab.ROOT / 'crates/horizon-client/src/camera.rs',
-                 lab.ROOT / 'mods/horizon/src/test/java/dev/horizonlab/parity/ParityData.java'])
+        sources=[lab.ROOT / 'crates/anoma-client/src/first_person.rs', lab.ROOT / 'crates/anoma-client/src/attack_strength.rs',
+                 lab.ROOT / 'crates/anoma-client/src/camera.rs',
+                 lab.ROOT / 'mods/anoma/src/test/java/dev/anomalab/parity/ParityData.java'])
 
 
 if __name__ == '__main__':

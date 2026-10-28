@@ -1,9 +1,9 @@
 [package]
-name = "horizon-launcher"
+name = "anoma-launcher"
 version = "0.2.0"
 edition = "2021"
 license = "MIT"
-description = "Downloads, prepares and starts Horizon builds"
+description = "Downloads, prepares and starts Anoma builds"
 
 [workspace]
 
@@ -24,24 +24,23 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 dirs = "5"
 # The system's preferred languages, for the window's language (i18n.rs).
 sys-locale = "0.3"
-self-replace = "1"
 clap = { version = "4", features = ["derive"] }
-horizon-theme = { path = "../crates/horizon-theme" }
-horizon-core = { path = "../crates/horizon-core" }
-horizon-prepare = { path = "../crates/horizon-prepare" }
+anoma-theme = { path = "../crates/anoma-theme" }
+anoma-core = { path = "../crates/anoma-core" }
+anoma-prepare = { path = "../crates/anoma-prepare" }
 # Join a friend: invite codes (the game does the joining).
-horizon-friends = { path = "../crates/horizon-friends" }
-horizon-bench = { path = "../crates/horizon-bench" }
+anoma-friends = { path = "../crates/anoma-friends" }
+anoma-bench = { path = "../crates/anoma-bench" }
 # Import modpack: the porting pipeline, run on the player's own files (docs/modpacks.md).
-horizon-port-pack = { path = "../crates/horizon-port-pack" }
-# Horizon's mod registry: its index and the checks a download passes before install.
-horizon-mods = { path = "../crates/horizon-mods", features = ["index"] }
+anoma-port-pack = { path = "../crates/anoma-port-pack" }
+# The mod API level a game build serves (backend::mod_api_level).
+anoma-mods = { path = "../crates/anoma-mods" }
 # Signed updates: archives are checked against the release's signed checksums (docs/security.md).
-horizon-release-sign = { path = "../crates/horizon-release-sign" }
+anoma-release-sign = { path = "../crates/anoma-release-sign" }
 # Opt-in data collection: the consent, the outbox and its upload (docs/telemetry.md).
-horizon-telemetry = { path = "../crates/horizon-telemetry" }
+anoma-telemetry = { path = "../crates/anoma-telemetry" }
 # level.dat and servers.dat (the worlds and server lists of instances)
-horizon-world = { path = "../crates/horizon-world" }
+anoma-world = { path = "../crates/anoma-world" }
 # Deleting a world moves it to the system's trash
 trash = "5"
 # Backup names carry the local time, as vanilla's do

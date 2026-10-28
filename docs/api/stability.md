@@ -1,6 +1,6 @@
 # API stability and versioning
 
-The rules every Horizon API follows ([the APIs](README.md)): how each one is versioned, what the stability levels
+The rules every Anoma API follows ([the APIs](README.md)): how each one is versioned, what the stability levels
 promise, how something is deprecated and removed, and the tests that keep old mods, scripts and tools working.
 
 ## Versions
@@ -16,8 +16,8 @@ promise, how something is deprecated and removed, and the tests that keep old mo
 
 | API | The version | A user names the line they need |
 | --- | --- | --- |
-| Mods | the WIT package (`horizon:mods@0.1.0`) | `api = "0.1"` in `horizon-mod.toml` |
-| Agent control | the control protocol's version (planned: a `hello` reply and MCP `serverInfo`) | `horizon-ctl --api 1` (planned) |
+| Mods | the WIT package (`anoma:mods@0.1.0`) | `api = "0.1"` in `anoma-mod.toml` |
+| Agent control | the control protocol's version (planned: a `hello` reply and MCP `serverInfo`) | `anoma-ctl --api 1` (planned) |
 | Server control API | the path (`/api/v1/`) | the path |
 | `server.toml` | the file's keys; a key is never renamed in place | nothing: old files keep loading |
 | Launcher commands | the command names and their `--json` output | nothing |
@@ -36,14 +36,14 @@ don't import it); faster, or fixing behaviour to what the reference already says
 
 ### Mod API levels
 
-A new WIT function doesn't break older mods, but a mod that calls it can't run on a Horizon from before it. So every
-function the game offers mods has an **API level**, the one it arrived at (`crates/horizon-mods/src/api_level.rs`):
-level 0 is the contract of Horizon 0.2.67 to 0.2.69, level 1 adds `render.set-minimap` and server mods' `players`, level 2 `game.raycast`, level 3 `command.run-quiet`, level 4 server mods' `world`, level 5 `recipes` (`items`, `all`, `known`), level 6 `browser` (`set-items`, `poll`, `set-recipes`) and `recipes.place` and `recipes.give`, level 7 `render.set-far-terrain`. A mod needs the level of
+A new WIT function doesn't break older mods, but a mod that calls it can't run on a Anoma from before it. So every
+function the game offers mods has an **API level**, the one it arrived at (`crates/anoma-mods/src/api_level.rs`):
+level 0 is the contract of Anoma 0.2.67 to 0.2.69, level 1 adds `render.set-minimap` and server mods' `players`, level 2 `game.raycast`, level 3 `command.run-quiet`, level 4 server mods' `world`, level 5 `recipes` (`items`, `all`, `known`), level 6 `browser` (`set-items`, `poll`, `set-recipes`) and `recipes.place` and `recipes.give`, level 7 `render.set-far-terrain`. A mod needs the level of
 the newest function it imports (a component imports only the functions it calls). The level is read from the file,
 never declared:
 
-- the game refuses a mod that needs a function it doesn't have, with "made for a newer Horizon (it uses
-  render.set-minimap): update Horizon to run it", instead of a linking error;
+- the game refuses a mod that needs a function it doesn't have, with "made for a newer Anoma (it uses
+  render.set-minimap): update Anoma to run it", instead of a linking error;
 - the registry's CI writes each mod version's level into the index (`api_level`), and installers take the newest
   version the running game can run.
 
@@ -65,7 +65,7 @@ Every part of an API has one level, shown in its reference and its surface page.
   mod, a host's script, an agent's tool) used it for a whole line and nothing broke. The maintainers' orchestrator
   proposes the promotion with the evidence (the compatibility tests, the complete docs, that line of use) and Ludovic
   approves it.
-- **Horizon-only by design.** An API is stable only for what Horizon itself does; a vanilla concept it exposes (a block
+- **Anoma-only by design.** An API is stable only for what Anoma itself does; a vanilla concept it exposes (a block
   id, a command, a `server.properties` key) changes when vanilla changes it, with a version port
   ([version-ports.md](../version-ports.md)), and the changelog says so.
 
@@ -76,7 +76,7 @@ Every part of an API has one level, shown in its reference and its surface page.
 2. The reference shows it as deprecated, and the surface page's changelog says what replaces it and when it goes.
 3. Using it logs one warning per mod, session or client, naming the replacement; it keeps working.
 4. It is removed only after the window, and only at the next line (preview) or major (stable).
-5. A line or major that is no longer served is refused with a clear message (`needs API 0.1; this Horizon serves 0.3
+5. A line or major that is no longer served is refused with a clear message (`needs API 0.1; this Anoma serves 0.3
    and 0.4`), never loaded half-way.
 
 ## Compatibility tests
@@ -85,7 +85,7 @@ Every preview and stable API has tests that run old users against the current co
 
 | API | The test |
 | --- | --- |
-| Mods | a test mod per served line, built from source against that line's WIT and SDK, loaded by today's runtime with expected output (`crates/horizon-mods/tests/`); a line is served as long as its test mod passes |
+| Mods | a test mod per served line, built from source against that line's WIT and SDK, loaded by today's runtime with expected output (`crates/anoma-mods/tests/`); a line is served as long as its test mod passes |
 | Agent control | a transcript per protocol version: commands and the reply keys each must have |
 | Server | `api::ROUTES` against `route()` (generated reference); a `server.toml` from each release line parses to the same settings; golden replies per endpoint |
 | Launcher | the generated reference; golden `--json` output per command |
@@ -108,18 +108,18 @@ Deprecations and breaking changes are in bold. The release notes of the game rel
 | Mod API: `render` (HUD shapes, camera shake and zoom; drawn by the game, no mod shaders) | experimental | manifest `experimental = ["render"]` |
 | Mod API: `input` (claimed items' use, the mod's keys, the mouse wheel) | experimental | manifest `experimental = ["input"]` |
 | Content mods (`registries`: data-driven blocks and items) | preview | manifest `api = "0.2"` |
-| Server mods: world `horizon-server-mod`, `players`, `server-events`, `world`, typed `server-command`s | experimental | manifest `api = "0.3"` |
+| Server mods: world `anoma-server-mod`, `players`, `server-events`, `world`, typed `server-command`s | experimental | manifest `api = "0.3"` |
 | Script mods (Lua run by an interpreter mod, [mods.md](mods.md#ways-in)) | not started | |
-| `cargo horizon-mod` (`new`, `build`, `run`), `horizon-mod-sdk` | preview | 0.1.0 |
+| `cargo anoma-mod` (`new`, `build`, `run`), `anoma-mod-sdk` | preview | 0.1.0 |
 | Shader API | not started | |
-| `horizon-ctl` commands and MCP tools | preview | none yet (unversioned) |
-| The game's own control-socket commands outside `horizon-ctl`'s table (test hooks) | experimental | |
-| `horizon-server` commands, `server.toml` | stable | `horizon-server --version` |
+| `anoma-ctl` commands and MCP tools | preview | none yet (unversioned) |
+| The game's own control-socket commands outside `anoma-ctl`'s table (test hooks) | experimental | |
+| `anoma-server` commands, `server.toml` | stable | `anoma-server --version` |
 | Server control API | stable | `/api/v1` |
-| `horizon-launcher` commands and MCP tools | preview | none yet (unversioned) |
+| `anoma-launcher` commands and MCP tools | preview | none yet (unversioned) |
 | Benchmark report | stable | `"version": 1` |
 | Telemetry batch and consent | stable | `"schema": 1`, consent `2` |
-| `horizon-graphics.txt`, `horizon-extras.txt`, `horizon-mods.txt` | preview | none |
+| `anoma-graphics.txt`, `anoma-extras.txt`, `anoma-mods.txt` | preview | none |
 | `SHA256SUMS` and `SHA256SUMS.sig` | stable | |
 
 ### The experimental mod APIs' choices

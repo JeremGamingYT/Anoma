@@ -1,10 +1,10 @@
 //! Home's Console: the game's output of this run as it comes, with a search, Follow (keep the
-//! newest line in view), Copy, and Share log (`horizon_launcher::game_log`): an upload to mclo.gs
+//! newest line in view), Copy, and Share log (`anoma_launcher::game_log`): an upload to mclo.gs
 //! that happens only after the player confirms, without their home folder or names.
 use super::servers_page::Field;
 use super::*;
 use gpui::{ClipboardItem, ScrollHandle};
-use horizon_launcher::game_log::{self, Shared};
+use anoma_launcher::game_log::{self, Shared};
 
 pub(super) struct Console {
     open: bool,
@@ -20,7 +20,7 @@ pub(super) struct Console {
 impl Default for Console {
     fn default() -> Self {
         Console {
-            open: std::env::var("HORIZON_LAUNCHER_CONSOLE").is_ok(),
+            open: std::env::var("ANOMA_LAUNCHER_CONSOLE").is_ok(),
             follow: true,
             scroll: ScrollHandle::new(),
             seen: (0, String::new()),

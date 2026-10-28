@@ -4,7 +4,7 @@
 The Java oracle (VanillaMobAiOracle) runs vanilla mobs in a real, headless, flat vanilla server
 level: each scenario builds a scene, places a target player and mobs with seeded random sources
 and ticks the mobs the way ServerLevel.tick does. The Rust probe (mob_ai_probe) replays the same
-scenarios on Horizon's mob AI. Both print every mob's AI-visible state after every tick (position,
+scenarios on Anoma's mob AI. Both print every mob's AI-visible state after every tick (position,
 motion, rotations, running goals and target goals, attack target, navigation path, move and look
 controls, movement input, brain activities and memories) and the sounds played; this harness
 reports, per scenario and mob, how many ticks match before the first divergence and what differs.
@@ -12,7 +12,7 @@ reports, per scenario and mob, how many ticks match before the first divergence 
   python3 tools/test_mob_ai_parity.py [--only NAME ...] [--rust-only] [--java-only] [--report-only] [--trace]
 
 The oracle traces every mob random draw with its call stack; --trace builds the probe with
-the rng-trace feature and line tables so the report shows Horizon's draws next to vanilla's.
+the rng-trace feature and line tables so the report shows Anoma's draws next to vanilla's.
 """
 import argparse
 import os
@@ -440,7 +440,7 @@ def compare(vanilla, rust, fields=None):
         r = rust.get(name)
         totals['scenarios'] += 1
         if r is None:
-            report.append(f'{name}: missing from Horizon')
+            report.append(f'{name}: missing from Anoma')
             continue
         mobs = sorted({m for t in v['ticks'].values() for m in t})
         clean = True
@@ -461,27 +461,27 @@ def compare(vanilla, rust, fields=None):
                     for k in (a or {}):
                         if b is None or a.get(k) != b.get(k):
                             show = (lambda x: x) if k == 'rng' else decode
-                            diffs.append(f'{k}: vanilla {show(a.get(k, "?"))} | horizon {show((b or {}).get(k, "?"))}')
+                            diffs.append(f'{k}: vanilla {show(a.get(k, "?"))} | anoma {show((b or {}).get(k, "?"))}')
                     for k in (b or {}):
                         if a is None or k not in a:
-                            diffs.append(f'{k}: vanilla ? | horizon {decode(b[k])}')
+                            diffs.append(f'{k}: vanilla ? | anoma {decode(b[k])}')
                     prev_v = v['ticks'].get(t - 1, {}).get(mob, {}).get('rng')
                     prev_r = r['ticks'].get(t - 1, {}).get(mob, {}).get('rng')
                     report.append(f'{name} mob {mob}: first divergence at tick {t} of {len(ticks)} '
                                   f'(random draws this tick: vanilla {draws(prev_v, (a or {}).get("rng"))}, '
-                                  f'horizon {draws(prev_r, (b or {}).get("rng"))})')
+                                  f'anoma {draws(prev_r, (b or {}).get("rng"))})')
                     for line in [x for x in v.get('trace', {}).get(t, []) if x.split(' ', 1)[0] == str(mob)][:40]:
                         report.append('      vanilla ' + line)
                     # Present when the probe is built with the rng-trace feature (see --trace).
                     for line in [x for x in r.get('trace', {}).get(t, []) if x.split(' ', 1)[0] == str(mob)][:40]:
-                        report.append('      horizon ' + line)
+                        report.append('      anoma ' + line)
                     report.extend('    ' + d for d in diffs[:12])
             if first is not None:
                 clean = False
         # Creaking hearts (state, block entity, level random): first differing tick.
         for t in sorted(set(v.get('hearts', {})) | set(r.get('hearts', {}))):
             if v.get('hearts', {}).get(t) != r.get('hearts', {}).get(t):
-                report.append(f'{name}: hearts differ at tick {t}: vanilla {v.get("hearts", {}).get(t)} | horizon {r.get("hearts", {}).get(t)}')
+                report.append(f'{name}: hearts differ at tick {t}: vanilla {v.get("hearts", {}).get(t)} | anoma {r.get("hearts", {}).get(t)}')
                 clean = False
                 break
         # Sounds, watched block changes, chest contents and hives: first differing tick.
@@ -489,7 +489,7 @@ def compare(vanilla, rust, fields=None):
             va, ra = v.get(kind, {}), r.get(kind, {})
             for t in sorted(set(va) | set(ra)):
                 if va.get(t, []) != ra.get(t, []):
-                    report.append(f'{name}: {kind} differ at tick {t}: vanilla {va.get(t, [])} | horizon {ra.get(t, [])}')
+                    report.append(f'{name}: {kind} differ at tick {t}: vanilla {va.get(t, [])} | anoma {ra.get(t, [])}')
                     clean = False
                     break
         totals['clean'] += clean
@@ -505,7 +505,7 @@ def main():
     parser.add_argument('--rust-only', action='store_true', help='reuse the last vanilla output')
     parser.add_argument('--report-only', action='store_true', help='print divergences without failing')
     parser.add_argument('--trace', action='store_true',
-                        help="also trace Horizon's mob random draws (rng-trace probe with line tables)")
+                        help="also trace Anoma's mob random draws (rng-trace probe with line tables)")
     args = parser.parse_args()
     build = lab.LOCAL / 'mob-ai-parity'
     build.mkdir(parents=True, exist_ok=True)
@@ -522,10 +522,10 @@ def main():
         # Each scenario forces 9x9 chunks 512 blocks past the last one, so a run generates ~80 chunks per scenario;
         # 3g ran out of heap in PoiManager.tick on a busy runner (#2160's CI, 143 scenarios).
         oracle_harness.run_logged(['java', '-Xmx4g', '-Djava.awt.headless=true', '-cp', str(classes) + os.pathsep + dependencies,
-                                   'dev.horizonlab.parity.VanillaMobAiOracle', inputs, build / 'vanilla.txt', world],
+                                   'dev.anomalab.parity.VanillaMobAiOracle', inputs, build / 'vanilla.txt', world],
                                   build, 'vanilla', timeout=3600)
     if not args.java_only:
-        command = ['cargo', 'build', '--locked', '--profile', 'fast', '-p', 'horizon-client', '--example', 'client_probe']
+        command = ['cargo', 'build', '--locked', '--profile', 'fast', '-p', 'anoma-client', '--example', 'client_probe']
         target, env = lab.cargo_target(), None
         if args.trace:
             target = lab.LOCAL / 'mob-ai-trace-target'
@@ -534,12 +534,12 @@ def main():
                        CARGO_PROFILE_RELEASE_LTO='false', CARGO_PROFILE_RELEASE_CODEGEN_UNITS='16')
         oracle_harness.run_logged(command, build, 'compile-rust', env=env)
         binary = target / 'fast/examples/client_probe'
-        oracle_harness.run_logged([binary, 'mob_ai_probe', lab.RESOURCES, inputs, build / 'horizon.txt'], build, 'horizon')
+        oracle_harness.run_logged([binary, 'mob_ai_probe', lab.RESOURCES, inputs, build / 'anoma.txt'], build, 'anoma')
     if args.java_only:
         return
     names = {s[0] for _, s in chosen}
     vanilla = {k: v for k, v in parse(build / 'vanilla.txt').items() if k in names}
-    report, totals = compare(vanilla, parse(build / 'horizon.txt'))
+    report, totals = compare(vanilla, parse(build / 'anoma.txt'))
     (build / 'report.txt').write_text('\n'.join(report) + '\n')
     print('\n'.join(report))
     print(f"{totals['clean']}/{totals['scenarios']} scenarios match entirely; "

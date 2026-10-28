@@ -6,15 +6,11 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-/// Hosts a file may come from: Modrinth's and CurseForge's file servers, and the release assets
-/// of Horizon's registry.
-const HOSTS: [&str; 5] = [
+/// Hosts a file may come from: Modrinth's and CurseForge's file servers.
+const HOSTS: [&str; 3] = [
     "https://cdn.modrinth.com/",
     "https://edge.forgecdn.net/",
     "https://mediafilez.forgecdn.net/",
-    horizon_mods::index::FILE_HOST,
-    // The registry's files at their address before the move to horizon-rust (GitHub redirects it).
-    "https://github.com/ludovic111/horizon-mods/releases/download/",
 ];
 /// Bigger than any pack these sources serve (Modrinth caps uploads at 500 MiB).
 const MAX: u64 = 1 << 30;
@@ -26,11 +22,12 @@ const MAX: u64 = 1 << 30;
 /// be a handshake per file, and a modpack brings hundreds.
 pub(super) fn agent(url: &str) -> ureq::Agent {
     let spec = crate::proxy::spec_for(url);
-    horizon_port_pack::net::keep("browser", spec.as_deref(), |proxy| {
+    anoma_port_pack::net::keep("browser", spec.as_deref(), |proxy| {
         let builder = ureq::AgentBuilder::new()
             .user_agent(&format!(
-                "horizon-rust/horizon horizon-launcher/{} (github.com/horizon-rust/horizon)",
-                crate::backend::VERSION
+                "Anoma/{} (github.com/{})",
+                crate::backend::VERSION,
+                crate::backend::REPO
             ))
             .timeout_connect(std::time::Duration::from_secs(15))
             .timeout_read(std::time::Duration::from_secs(60));
@@ -45,7 +42,7 @@ pub(super) fn agent(url: &str) -> ureq::Agent {
 pub fn refuse(file: &FileRef) -> Option<String> {
     if !HOSTS.iter().any(|h| file.url.starts_with(h)) {
         return Some(format!(
-            "{} isn't on Modrinth's, CurseForge's or Horizon's file servers.",
+            "{} isn't on Modrinth's or CurseForge's file servers.",
             file.url
         ));
     }

@@ -1,4 +1,4 @@
-//! Horizon launcher: installs Horizon builds, prepares them from the player's own Minecraft,
+//! Anoma launcher: installs Anoma builds, prepares them from the player's own Minecraft,
 //! and starts the client or a dedicated server.
 
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
@@ -49,12 +49,12 @@ use gpui::{
     FontWeight, Hsla, KeyBinding, KeyDownEvent, Menu, MenuItem, PathPromptOptions, SharedString,
     Stateful, Subscription, Window, WindowBounds, WindowOptions,
 };
-use horizon_launcher::account::{self, Accounts, SignIn, SignInState};
-use horizon_launcher::backend::{self, Job, Msg, Release, Running, Settings, Updates};
-use horizon_launcher::i18n::{self, tr, trf};
-use horizon_launcher::instances;
-use horizon_launcher::nightly;
-use horizon_launcher::telemetry;
+use anoma_launcher::account::{self, Accounts, SignIn, SignInState};
+use anoma_launcher::backend::{self, Job, Msg, Release, Running, Settings, Updates};
+use anoma_launcher::i18n::{self, tr, trf};
+use anoma_launcher::instances;
+use anoma_launcher::nightly;
+use anoma_launcher::telemetry;
 use scrollbar::Scrollbar;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -76,10 +76,10 @@ enum Page {
 }
 
 impl Page {
-    /// `HORIZON_LAUNCHER_PAGE=mods` (or `modpacks`, `shaders`, `servers`, `versions`, `notes`,
+    /// `ANOMA_LAUNCHER_PAGE=mods` (or `modpacks`, `shaders`, `servers`, `versions`, `notes`,
     /// `settings`) opens on that page, for screenshots; Home otherwise.
     fn from_env() -> Page {
-        match std::env::var("HORIZON_LAUNCHER_PAGE").as_deref() {
+        match std::env::var("ANOMA_LAUNCHER_PAGE").as_deref() {
             Ok("mods" | "modpacks" | "shaders" | "datapacks") => Page::Mods,
             Ok("servers") => Page::Servers,
             Ok("versions") => Page::Versions,
@@ -101,15 +101,6 @@ impl Page {
     ];
 }
 
-/// The launcher's own update, as the footer and Settings show it.
-#[derive(Clone, PartialEq)]
-enum SelfUpdate {
-    Idle,
-    Downloading(String, f32),
-    Ready(String),
-    Failed(String),
-}
-
 /// The last game the launcher started ended badly: what it left behind.
 #[derive(Clone)]
 struct Crash {
@@ -122,9 +113,9 @@ struct Crash {
 
 /// The opening: the wordmark holds at least `OPENING_HOLD` (until the release
 /// list is in, at most `OPENING_MAX`), then the launcher appears over `OPENING_REVEAL`.
-const OPENING_HOLD: Duration = horizon_theme::OPENING_HOLD;
-const OPENING_MAX: Duration = horizon_theme::OPENING_MAX;
-const OPENING_REVEAL: Duration = horizon_theme::OPENING_REVEAL;
+const OPENING_HOLD: Duration = anoma_theme::OPENING_HOLD;
+const OPENING_MAX: Duration = anoma_theme::OPENING_MAX;
+const OPENING_REVEAL: Duration = anoma_theme::OPENING_REVEAL;
 
 /// The phase of the opening at one moment: how far the reveal has gone, 0 to 1.
 struct Opening {
@@ -135,7 +126,7 @@ struct Opening {
 }
 
 fn ease_out_cubic(x: f32) -> f32 {
-    horizon_theme::ease_out_cubic(x)
+    anoma_theme::ease_out_cubic(x)
 }
 
 enum Load<T> {
@@ -158,8 +149,7 @@ struct Launcher {
     updates: Updates,
     checked: Option<Instant>,
     update_error: Option<String>,
-    self_update: SelfUpdate,
-    /// The Horizon version being installed as an update, and whether it becomes the selected one.
+    /// The Anoma version being installed as an update, and whether it becomes the selected one.
     update_install: Option<(String, bool)>,
     /// The install bar's previous and current fraction, so it moves rather than jumps.
     bar: (f32, f32),
@@ -170,7 +160,7 @@ struct Launcher {
     /// nothing can launch, select or prepare it, and its row can't install or remove it again.
     removing: Option<String>,
     install_error: Option<(String, String)>,
-    /// Nightly (`horizon_launcher::nightly`): how far the nightly being installed is, and why the
+    /// Nightly (`anoma_launcher::nightly`): how far the nightly being installed is, and why the
     /// last check or install failed.
     nightly_progress: Option<f32>,
     nightly_error: Option<String>,
@@ -185,7 +175,7 @@ struct Launcher {
     /// Why the last picture for Home's background was refused.
     background_error: Option<String>,
     settings: Settings,
-    /// The Discord, sponsor and website links: built in until links.json on main has been read.
+    /// The Discord, sponsor and website links: none are set, so their buttons stay hidden.
     links: backend::Links,
     preparing: bool,
     prepare_log: VecDeque<String>,
@@ -237,8 +227,6 @@ struct Launcher {
     collection: collection::Collection,
     /// Settings' "Connect an AI agent" (`agents_page`).
     agents: agents_page::AgentsUi,
-    /// How many play Horizon now, while the server answers ("N playing now" on the Play page).
-    playing: Option<u64>,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
     _appearance: Subscription,
@@ -247,16 +235,15 @@ struct Launcher {
     install_started: Option<Instant>,
     prepare_started: Option<Instant>,
     play_pressed: Option<Instant>,
-    /// `horizon-launcher benchmark` started this window to measure it.
+    /// `anoma-launcher benchmark` started this window to measure it.
     bench: Option<perf::Bench>,
     /// The Modpacks page: the imported packs (read when the page first opens), the one shown,
     /// the report's filter, and the pipeline step running now with its log.
-    packs: Vec<horizon_launcher::modpacks::Imported>,
-    /// Modpacks installed from Horizon's registry, each its own profile.
-    registry_packs: Vec<horizon_launcher::browser::horizon::pack::Installed>,
+    packs: Vec<anoma_launcher::modpacks::Imported>,
+    /// Modpacks installed from Anoma's registry, each its own profile.
     packs_loaded: Option<Instant>,
     pack_open: Option<String>,
-    pack_filter: Option<horizon_port_pack::report::Status>,
+    pack_filter: Option<anoma_port_pack::report::Status>,
     pack_busy: bool,
     pack_log: VecDeque<String>,
     pack_error: Option<String>,
@@ -280,10 +267,10 @@ struct Launcher {
     aside: while_playing::Aside,
     /// The selected instance's desktop shortcut (`shortcut_page.rs`).
     shortcuts: shortcut_page::Shortcuts,
-    /// The name the game made up for an offline player (`horizon-player.txt`), for the top bar.
+    /// The name the game made up for an offline player (`anoma-player.txt`), for the top bar.
     offline_name: Option<String>,
     /// The player's servers, for the sidebar until the Servers page has read them.
-    side_servers: Vec<horizon_launcher::servers::Entry>,
+    side_servers: Vec<anoma_launcher::servers::Entry>,
     /// The pixel art made for this window (`art.rs`), and pictures downloaded by URL.
     art: art::Art,
     /// The window's scale, as of its last frame, for art drawn outside `render`'s reach.
@@ -339,14 +326,14 @@ impl Launcher {
         }
         // Release builds on Linux put their entry back in the applications menu when there is
         // none or it starts a program that is gone (a moved or deleted binary), never over one
-        // that works; `HORIZON_LAUNCHER_DESKTOP_ENTRY=1` does it in a development build.
+        // that works; `ANOMA_LAUNCHER_DESKTOP_ENTRY=1` does it in a development build.
         if cfg!(target_os = "linux")
             && settings.desktop_entry()
             && (!cfg!(debug_assertions)
-                || std::env::var_os("HORIZON_LAUNCHER_DESKTOP_ENTRY").is_some())
+                || std::env::var_os("ANOMA_LAUNCHER_DESKTOP_ENTRY").is_some())
         {
             std::thread::spawn(|| {
-                let _ = horizon_launcher::desktop::repair(backend::exe_path());
+                let _ = anoma_launcher::desktop::repair(backend::exe_path());
             });
         }
         let installed = backend::installed();
@@ -378,7 +365,6 @@ impl Launcher {
             updates: Updates::default(),
             checked: None,
             update_error: None,
-            self_update: SelfUpdate::Idle,
             update_install: None,
             bar: (0., 0.),
             releases: Load::Loading,
@@ -428,7 +414,6 @@ impl Launcher {
             client_run: None,
             collection: collection::Collection::load(),
             agents: agents_page::AgentsUi::default(),
-            playing: None,
             tx,
             rx,
             _appearance: appearance,
@@ -438,7 +423,6 @@ impl Launcher {
             play_pressed: None,
             bench: perf::Bench::from_env(),
             packs: Vec::new(),
-            registry_packs: Vec::new(),
             packs_loaded: None,
             pack_open: None,
             pack_filter: None,
@@ -460,7 +444,7 @@ impl Launcher {
             aside: while_playing::Aside::new(window.window_handle()),
             shortcuts: Default::default(),
             offline_name: offline_name(),
-            side_servers: horizon_launcher::servers::list(),
+            side_servers: anoma_launcher::servers::list(),
             art: art::Art::default(),
             scale: window.scale_factor(),
         };
@@ -484,10 +468,8 @@ impl Launcher {
             }
         });
         this.fetch_startup_releases();
-        this.fetch_links();
         // What the game and the launcher kept, if the player allows it and there is a server.
         telemetry::send_in_background();
-        telemetry::watch_playing(this.tx.clone());
         this
     }
 
@@ -515,34 +497,10 @@ impl Launcher {
         });
     }
 
-    fn update_launcher(&mut self, release: Release) {
-        if !backend::self_update_allowed()
-            || matches!(
-                self.self_update,
-                SelfUpdate::Downloading(..) | SelfUpdate::Ready(_)
-            )
-        {
-            return;
-        }
-        let version = backend::launcher_version(&release.tag)
-            .unwrap_or_default()
-            .to_string();
-        self.self_update = SelfUpdate::Downloading(version, 0.);
-        let tx = self.tx.clone();
-        std::thread::spawn(move || {
-            let progress = |p| {
-                let _ = tx.send(Msg::LauncherProgress(p));
-            };
-            let _ = tx.send(Msg::LauncherUpdated(backend::self_update(
-                &release, progress,
-            )));
-        });
-    }
-
-    /// Installs the Horizon version the last check found, keeping the player's choice of
+    /// Installs the Anoma version the last check found, keeping the player's choice of
     /// version unless they were on the newest one.
     fn install_update(&mut self) {
-        let Some(release) = self.updates.horizon.clone() else {
+        let Some(release) = self.updates.anoma.clone() else {
             return;
         };
         if self.installing.is_some() || self.removing.as_ref() == Some(&release.tag) {
@@ -608,13 +566,6 @@ impl Launcher {
         });
     }
 
-    fn fetch_links(&self) {
-        let tx = self.tx.clone();
-        std::thread::spawn(move || {
-            let _ = tx.send(Msg::Links(backend::links()));
-        });
-    }
-
     fn drain(&mut self, cx: &mut Context<Self>) {
         let mut changed = false;
         self.perf.tick();
@@ -639,12 +590,10 @@ impl Launcher {
                     }
                     self.releases = r.map_or_else(Load::Failed, Load::Ready)
                 }
-                Msg::Links(links) => self.links = links,
                 // The page reads is_prepared when drawn; `changed` redraws it.
                 Msg::Reused(_) => self.installed = backend::installed(),
                 Msg::Keychain(persistent) => self.keychain = persistent,
                 Msg::Owner(owns) => self.owner = Some(owns),
-                Msg::Playing(playing) => self.playing = playing,
                 Msg::Session(session) => {
                     if let Some(tag) = self.starting_client.take() {
                         let mut cmd = backend::client_command(&tag);
@@ -682,7 +631,7 @@ impl Launcher {
                                     .find(|i| i.work == work)
                                     .map(|i| i.id);
                                 let applied =
-                                    horizon_launcher::modpacks::apply_profile(&mut cmd, &work);
+                                    anoma_launcher::modpacks::apply_profile(&mut cmd, &work);
                                 (applied, id)
                             }
                             None => {
@@ -710,7 +659,7 @@ impl Launcher {
                             .and_then(|id| instances::list().into_iter().find(|i| &i.id == id))
                             .map(|i| i.launch)
                             .unwrap_or_default();
-                        let cmd = horizon_launcher::launch::wrap(cmd, &launch);
+                        let cmd = anoma_launcher::launch::wrap(cmd, &launch);
                         self.client_home = cmd.get_current_dir().map(|d| d.to_path_buf());
                         match backend::spawn(Job::Client, cmd, self.tx.clone()) {
                             Ok(r) => {
@@ -741,8 +690,8 @@ impl Launcher {
                     }
                     match result {
                         Ok(()) => {
-                            if self.updates.horizon.as_ref().is_some_and(|r| r.tag == tag) {
-                                self.updates.horizon = None;
+                            if self.updates.anoma.as_ref().is_some_and(|r| r.tag == tag) {
+                                self.updates.anoma = None;
                             }
                             if as_update.is_none_or(|(_, select)| select) {
                                 self.settings.selected = Some(tag);
@@ -769,9 +718,6 @@ impl Launcher {
                     if self.settings.auto_install() {
                         self.install_update();
                     }
-                    if let Some(release) = self.updates.launcher.clone() {
-                        self.update_launcher(release);
-                    }
                     self.update_nightly();
                 }
                 Msg::Updates(Err(e)) => self.update_error = Some(e),
@@ -797,21 +743,6 @@ impl Launcher {
                         Ok(_) => {}
                         Err(e) => self.nightly_error = Some(e),
                     }
-                }
-                Msg::LauncherProgress(p) => {
-                    if let SelfUpdate::Downloading(_, f) = &mut self.self_update {
-                        *f = p;
-                    }
-                }
-                Msg::LauncherUpdated(result) => {
-                    let version = match &self.self_update {
-                        SelfUpdate::Downloading(v, _) => v.clone(),
-                        _ => String::new(),
-                    };
-                    self.self_update = match result {
-                        Ok(()) => SelfUpdate::Ready(version),
-                        Err(e) => SelfUpdate::Failed(e),
-                    };
                 }
                 Msg::PackLine(line) => {
                     self.pack_log.push_back(line);
@@ -878,7 +809,7 @@ impl Launcher {
                                 .and_then(|since| backend::crash_report_since(&home, since));
                             if error.is_some() && report.is_none() && self.switched_to_dx12() {
                                 self.client_error = Some(
-                                    "Horizon's Vulkan renderer crashed while starting on this \
+                                    "Anoma's Vulkan renderer crashed while starting on this \
                                      graphics card, so the game now uses DirectX 12. Press Play \
                                      to start it again. Video Settings > Graphics API switches \
                                      back."
@@ -959,7 +890,7 @@ impl Launcher {
         for home in homes {
             match backend::switch_to_dx12(&home) {
                 Ok(changed) => switched |= changed,
-                Err(e) => eprintln!("Horizon launcher: could not switch to DirectX 12: {e}"),
+                Err(e) => eprintln!("Anoma launcher: could not switch to DirectX 12: {e}"),
             }
         }
         switched
@@ -1027,12 +958,12 @@ impl Launcher {
         let Some(tag) = self.selected().cloned() else {
             return;
         };
-        horizon_launcher::mojang::CANCEL.store(false, Ordering::Relaxed);
+        anoma_launcher::mojang::CANCEL.store(false, Ordering::Relaxed);
         let minecraft = self
             .settings
             .minecraft_dir
             .clone()
-            .unwrap_or_else(|| horizon_prepare::artifacts::minecraft_dir(None));
+            .unwrap_or_else(|| anoma_prepare::artifacts::minecraft_dir(None));
         self.prepare_log.clear();
         self.prepare_error = None;
         self.prepare_log
@@ -1233,7 +1164,7 @@ fn version_tag(tag: &str) -> Div {
         .child(tag.trim_start_matches('v').to_string())
 }
 
-/// Horizon's mark: two stems, their reflection below, and the horizon across in the accent.
+/// Anoma's mark: two stems, their reflection below, and the anoma across in the accent.
 fn mark(size: f32, t: &Theme) -> Div {
     let u = size / 16.;
     let stem = |x: f32, y: f32, color: Hsla| {
@@ -1349,10 +1280,10 @@ fn button(
     keyboard(track_hover(base, id), &t).active(|s| s.opacity(theme::PRESSED).top(px(1.)))
 }
 
-/// Copies to the clipboard, or into `HORIZON_LAUNCHER_CLIPBOARD` when a test run sets it
-/// (`horizon_launcher::desktop_seams`).
+/// Copies to the clipboard, or into `ANOMA_LAUNCHER_CLIPBOARD` when a test run sets it
+/// (`anoma_launcher::desktop_seams`).
 fn copy_to_clipboard(cx: &mut App, item: gpui::ClipboardItem) {
-    let Some(file) = horizon_launcher::desktop_seams::clipboard_file() else {
+    let Some(file) = anoma_launcher::desktop_seams::clipboard_file() else {
         cx.write_to_clipboard(item);
         return;
     };
@@ -1587,10 +1518,10 @@ fn centered(text_: &str, t: &Theme) -> Div {
 
 /// The name the game made up for a player without an account, once it has run.
 fn offline_name() -> Option<String> {
-    player_name(&std::fs::read_to_string(backend::game_home().join("horizon-player.txt")).ok()?)
+    player_name(&std::fs::read_to_string(backend::game_home().join("anoma-player.txt")).ok()?)
 }
 
-/// The name in `horizon-player.txt`: the game writes `name:Player12345` (horizon-client's
+/// The name in `anoma-player.txt`: the game writes `name:Player12345` (anoma-client's
 /// offline_name.rs).
 fn player_name(text: &str) -> Option<String> {
     text.lines()
@@ -1784,7 +1715,7 @@ impl Launcher {
                         .child(
                             blocks::pixel(20., FontWeight::SEMIBOLD)
                                 .text_color(t.ink)
-                                .child("HORIZON"),
+                                .child("ANOMA"),
                         ),
                 )
             })
@@ -1801,7 +1732,7 @@ impl Launcher {
             )
     }
 
-    /// The sidebar: Horizon and the imported modpacks, the player's servers, then the
+    /// The sidebar: Anoma and the imported modpacks, the player's servers, then the
     /// launcher's own update, the community links and its version.
     fn sidebar(&mut self, window: &Window, cx: &mut Context<Self>) -> Stateful<Div> {
         let t = self.theme;
@@ -1920,46 +1851,6 @@ impl Launcher {
                 .on_click(move |_, _, cx| cx.open_url(&url))
         };
         let mut foot = div().mt_auto().flex().flex_col().gap(px(2.)).pt(px(12.));
-        match &self.self_update {
-            SelfUpdate::Downloading(version, f) => {
-                foot = foot.child(
-                    blocks::panel(&t)
-                        .flex()
-                        .flex_col()
-                        .gap(px(8.))
-                        .p(px(10.))
-                        .mb(px(6.))
-                        .child(
-                            blocks::pixel(13., FontWeight::MEDIUM)
-                                .text_color(t.ink)
-                                .child(format!("Launcher {version}  {:.0}%", f * 100.)),
-                        )
-                        .child(div().flex().child(progress_bar(Some((*f, *f)), &t))),
-                )
-            }
-            SelfUpdate::Ready(version) => {
-                foot = foot.child(
-                    blocks::panel(&t)
-                        .flex()
-                        .flex_col()
-                        .gap(px(8.))
-                        .p(px(10.))
-                        .mb(px(6.))
-                        .child(
-                            blocks::pixel(13., FontWeight::MEDIUM)
-                                .text_color(t.ink)
-                                .child(format!("Launcher updated to {version}")),
-                        )
-                        .child(button("restart", "Restart", Kind::Primary, &t).on_click(
-                            cx.listener(|this, _: &ClickEvent, _, cx| {
-                                this.self_update = SelfUpdate::Failed(backend::restart());
-                                cx.notify();
-                            }),
-                        )),
-                )
-            }
-            _ => {}
-        }
         // Sculk's card above the links: seen without scrolling, on every page but Servers, which shows
         // its wide banner. Tall where the sidebar has the height for it besides its rows (about 60
         // high each, under headings of about 40) and the links, compact otherwise. After a while on
@@ -2235,7 +2126,7 @@ impl Launcher {
                     .child(play),
             );
 
-        // Not prepared: an owner can have Horizon download Minecraft from Mojang; without an
+        // Not prepared: an owner can have Anoma download Minecraft from Mojang; without an
         // owner there is nothing to play, so signing in comes first.
         let first = (!prepared && !self.preparing)
             .then_some(self.owner)
@@ -2243,7 +2134,7 @@ impl Launcher {
         let resources_value = match first {
             _ if self.preparing => tr("Preparing…").to_string(),
             Some(true) => trf(
-                "Not prepared. Horizon can download Minecraft {version} from Mojang for your account, or use your own install.",
+                "Not prepared. Anoma can download Minecraft {version} from Mojang for your account, or use your own install.",
                 &[("version", &version)],
             ),
             Some(false) => trf(
@@ -2389,7 +2280,7 @@ impl Launcher {
             }
         }
 
-        // The banner: Horizon's landscape (`art.rs`) under a veil of the page colour, the hero and
+        // The banner: Anoma's landscape (`art.rs`) under a veil of the page colour, the hero and
         // the Play row over it. It reaches the content's edges and the top bar.
         let (scene, scene_width) = self.art.scene(t.dark, self.scale, banner_width);
         let veil = |angle: f32, from: f32, to: f32, at: f32| {
@@ -2445,10 +2336,10 @@ impl Launcher {
             let last = self.prepare_log.back().cloned().unwrap_or_default();
             // A download from Mojang shows how far it is, and can stop (it goes on from there
             // next time).
-            let download = horizon_launcher::mojang::progress();
+            let download = anoma_launcher::mojang::progress();
             let cancel = download.map(|_| {
                 button("download-cancel", "Cancel", Kind::Ghost, &t).on_click(|_, _, _| {
-                    horizon_launcher::mojang::CANCEL.store(true, Ordering::Relaxed)
+                    anoma_launcher::mojang::CANCEL.store(true, Ordering::Relaxed)
                 })
             });
             page = page.child(
@@ -2511,7 +2402,7 @@ impl Launcher {
         page
     }
 
-    /// "Horizon crashed": the report and the logs, and where to report it.
+    /// "Anoma crashed": the report and the logs, and where to report it.
     fn crash_notice(&self, crash: Crash, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let mut actions = div().flex().flex_wrap().gap(px(8.)).mt(px(8.));
@@ -2587,7 +2478,7 @@ impl Launcher {
             .child(
                 text(theme::HEADING)
                     .text_color(t.ink)
-                    .child(tr("Horizon crashed")),
+                    .child(tr("Anoma crashed")),
             );
         if !crash.summary.is_empty() {
             body = body.child(div().text_color(t.ink_soft).child(crash.summary));
@@ -2634,7 +2525,7 @@ impl Launcher {
                 .and_then(|r| backend::notes_summary(&r.body)),
             _ => None,
         };
-        let title = "Horizon";
+        let title = "Anoma";
         // Never squeezed by the rows below: the ping notice can make it tall.
         let mut hero = div()
             .flex()
@@ -2642,41 +2533,29 @@ impl Launcher {
             .flex_col()
             .gap(px(12.))
             .child(
-                div()
-                    .flex()
-                    .child(
-                        div()
-                            .flex()
-                            .flex_none()
-                            .items_center()
-                            .gap(px(10.))
-                            .px(px(10.))
-                            .py(px(5.))
-                            .bg(t.side.opacity(0.85))
-                            .border_2()
-                            .border_color(t.outline)
-                            .child(
-                                div()
-                                    .size(px(8.))
-                                    .bg(if prepared { t.success } else { t.warn }),
-                            )
-                            .child(caps(format!("Minecraft {version}")).text_color(t.ink_soft))
-                            .child(div().size(px(4.)).bg(t.muted))
-                            .child(
-                                caps(tr(if prepared { "Ready" } else { "Needs preparing" }))
-                                    .text_color(if prepared { t.success } else { t.warn }),
-                            ),
-                    )
-                    .children(self.playing.map(|n| {
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(10.))
-                            .child(div().size(px(4.)).rounded_full().bg(t.rule))
-                            .child(
-                                caps(format!("{} playing now", thousands(n))).text_color(t.muted),
-                            )
-                    })),
+                div().flex().child(
+                    div()
+                        .flex()
+                        .flex_none()
+                        .items_center()
+                        .gap(px(10.))
+                        .px(px(10.))
+                        .py(px(5.))
+                        .bg(t.side.opacity(0.85))
+                        .border_2()
+                        .border_color(t.outline)
+                        .child(
+                            div()
+                                .size(px(8.))
+                                .bg(if prepared { t.success } else { t.warn }),
+                        )
+                        .child(caps(format!("Minecraft {version}")).text_color(t.ink_soft))
+                        .child(div().size(px(4.)).bg(t.muted))
+                        .child(
+                            caps(tr(if prepared { "Ready" } else { "Needs preparing" }))
+                                .text_color(if prepared { t.success } else { t.warn }),
+                        ),
+                ),
             )
             .child(
                 blocks::pixel(60., FontWeight::BOLD)
@@ -2691,7 +2570,7 @@ impl Launcher {
                     .text_color(t.ink_soft)
                     .child(line)
             }));
-        if let Some(release) = &self.updates.horizon {
+        if let Some(release) = &self.updates.anoma {
             let installing = self.installing.as_ref().filter(|(t, _)| *t == release.tag);
             let line = div()
                 .flex()
@@ -2786,29 +2665,29 @@ impl Launcher {
                 cx.notify();
             },
         ));
-        // Linux: the launcher's entry in the applications menu (`horizon_launcher::desktop`).
+        // Linux: the launcher's entry in the applications menu (`anoma_launcher::desktop`).
         let menu_entry = switch("desktop-entry", self.settings.desktop_entry(), &t).on_click(
             cx.listener(|this, _: &ClickEvent, _, cx| {
                 let on = !this.settings.desktop_entry();
                 this.settings.desktop_entry = Some(on);
                 this.settings.save();
                 let _ = if on {
-                    horizon_launcher::desktop::install(backend::exe_path()).map(|_| ())
+                    anoma_launcher::desktop::install(backend::exe_path()).map(|_| ())
                 } else {
-                    horizon_launcher::desktop::remove()
+                    anoma_launcher::desktop::remove()
                 };
                 cx.notify();
             }),
         );
-        let horizon = match (&self.updates.horizon, &self.update_error) {
+        let anoma = match (&self.updates.anoma, &self.update_error) {
             (Some(r), _) => trf("{version} available", &[("version", &r.tag)]),
             (None, Some(e)) => e.clone(),
             (None, None) if self.checked.is_some() => tr("Up to date").to_string(),
             _ => tr("Checking…").to_string(),
         };
-        let horizon_action = self
+        let anoma_action = self
             .updates
-            .horizon
+            .anoma
             .as_ref()
             .filter(|_| self.installing.is_none())
             .map(|_| {
@@ -2819,61 +2698,12 @@ impl Launcher {
                     }))
                     .into_any_element()
             });
-        let launcher = match &self.self_update {
-            SelfUpdate::Downloading(v, p) => {
-                let done = format!("{:.0}", p * 100.);
-                let said = trf(
-                    "downloading {version}, {percent}%",
-                    &[("version", v), ("percent", &done)],
-                );
-                format!("{}  ·  {said}", backend::VERSION)
-            }
-            SelfUpdate::Ready(v) => trf(
-                "Updated to {version}. Restart the launcher to use it.",
-                &[("version", v)],
-            ),
-            SelfUpdate::Failed(e) => format!(
-                "{}  ·  {}",
-                backend::VERSION,
-                trf("the update failed: {error}", &[("error", e)])
-            ),
-            SelfUpdate::Idle => match &self.updates.launcher {
-                Some(r) => format!(
-                    "{}  ·  {}",
-                    backend::VERSION,
-                    trf(
-                        "{version} available",
-                        &[(
-                            "version",
-                            backend::launcher_version(&r.tag).unwrap_or_default()
-                        )]
-                    )
-                ),
-                None if self.checked.is_some() && self.update_error.is_none() => {
-                    format!("{}  ·  {}", backend::VERSION, tr("up to date"))
-                }
-                None => backend::VERSION.to_string(),
-            },
-        };
-        let launcher_action = match &self.self_update {
-            SelfUpdate::Ready(_) => Some(
-                button("restart-settings", "Restart", Kind::Secondary, &t)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                        this.self_update = SelfUpdate::Failed(backend::restart());
-                        cx.notify();
-                    }))
-                    .into_any_element(),
-            ),
-            SelfUpdate::Downloading(..) => None,
-            _ => Some(
-                button("check", "Check now", Kind::Ghost, &t)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                        this.check_updates();
-                        cx.notify();
-                    }))
-                    .into_any_element(),
-            ),
-        };
+        let launcher_action = button("check", "Check now", Kind::Ghost, &t)
+            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                this.check_updates();
+                cx.notify();
+            }))
+            .into_any_element();
         let mono = |s: String| div().font_family(theme::MONO).child(s).into_any_element();
         let plain = |s: &str| div().child(tr(s).to_string()).into_any_element();
         let (accounts, n) = self.account_rows(cx);
@@ -2956,12 +2786,12 @@ impl Launcher {
                     .child(group("AI", "terminal"))
                     .child(self.no_ai_row(n + 6, cx))
                     .child(group("About", "info-box"))
-                    .child(index_row(n + 7, "Horizon", Some(plain(&horizon)), horizon_action, &t))
+                    .child(index_row(n + 7, "Anoma", Some(plain(&anoma)), anoma_action, &t))
                     .child(index_row(
                         n + 8,
                         tr("Launcher"),
-                        Some(plain(&launcher)),
-                        launcher_action,
+                        Some(plain(backend::VERSION)),
+                        Some(launcher_action),
                         &t,
                     ))
                     .child(index_row(
@@ -2995,7 +2825,7 @@ impl Launcher {
                             n + 11,
                             tr("Applications menu"),
                             Some(plain(if self.settings.desktop_entry() {
-                                "Horizon and its icon are in your desktop's menu."
+                                "Anoma and its icon are in your desktop's menu."
                             } else {
                                 "Not in your desktop's menu."
                             })),
@@ -3009,7 +2839,7 @@ impl Launcher {
     }
 
     /// Settings' Nightly row: off by default; on, the nightly build installs and updates in its
-    /// own instance, and the release stays one click away (the Horizon instance).
+    /// own instance, and the release stays one click away (the Anoma instance).
     fn nightly_row(&self, n: usize, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let on = self.settings.nightly;
@@ -3037,7 +2867,7 @@ impl Launcher {
                 .and_then(|i| i.version.clone())
             {
                 Some(version) => trf(
-                    "{version} in the Nightly instance. Choose Horizon in the sidebar to play the release.",
+                    "{version} in the Nightly instance. Choose Anoma in the sidebar to play the release.",
                     &[("version", &version)],
                 ),
                 None => tr("No nightly build yet.").to_string(),
@@ -3183,7 +3013,7 @@ impl Launcher {
                 cx.notify();
             }));
         // A half-typed address is no reason to complain; one left behind is.
-        let detail = match (focused, horizon_launcher::proxy::refuse(&self.proxy_input)) {
+        let detail = match (focused, anoma_launcher::proxy::refuse(&self.proxy_input)) {
             (false, Some(why)) => div().text_color(t.danger).child(why).into_any_element(),
             _ => div()
                 .child(
@@ -3197,12 +3027,12 @@ impl Launcher {
     }
 
     /// Keeps the Proxy field in `settings.json`, and tells the parts that build their own agents
-    /// (`horizon-port-pack`) which proxy to use.
+    /// (`anoma-port-pack`) which proxy to use.
     fn save_proxy(&mut self) {
         let value = self.proxy_input.trim().to_owned();
         self.settings.proxy = (!value.is_empty()).then_some(value);
         self.settings.save();
-        horizon_launcher::proxy::announce(self.settings.proxy.clone());
+        anoma_launcher::proxy::announce(self.settings.proxy.clone());
     }
 
     /// Settings' Microsoft accounts: who is signed in and plays, the sign-in with its code. The
@@ -3293,7 +3123,7 @@ impl Launcher {
             Some(SignInState::Done(Ok(a))) => div().child(format!("Signed in as {}.", a.name)),
             Some(SignInState::Done(Err(e))) => div().text_color(t.danger).child(e.clone()),
             None if self.accounts.accounts.is_empty() => div().child(tr(
-                "Horizon needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
+                "Anoma needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
             )),
             None => div().child(tr("Add another account.")),
         };
@@ -3429,7 +3259,7 @@ impl Launcher {
                 cx.stop_propagation();
                 cx.notify();
             }));
-        let valid = horizon_friends::invite::parse(&self.friend_code).is_some();
+        let valid = anoma_friends::invite::parse(&self.friend_code).is_some();
         let mut join = button("join-friend", "Join", Kind::Secondary, &t);
         if can_play && valid {
             join = join.on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
@@ -3461,7 +3291,7 @@ impl Launcher {
     }
 
     /// Plays the selected instance straight into a world (`--world`) or a server (`--server`):
-    /// flags every Horizon release takes.
+    /// flags every Anoma release takes.
     pub(crate) fn quick_play(&mut self, flag: &'static str, value: String) {
         self.quick_play = Some((flag, value));
         self.play();
@@ -3471,7 +3301,7 @@ impl Launcher {
     }
 
     fn join_friend(&mut self) {
-        if horizon_friends::invite::parse(&self.friend_code).is_none() {
+        if anoma_friends::invite::parse(&self.friend_code).is_none() {
             return;
         }
         self.joining = Some(self.friend_code.clone());
@@ -3713,7 +3543,7 @@ impl Launcher {
                                 .child("Support the work below"),
                         )
                         .child(text(theme::UI).text_color(t.muted).child(
-                            "Horizon is built in the open. Sponsors fund the next release.",
+                            "Anoma is built in the open. Sponsors fund the next release.",
                         )),
                 )
                 .child(
@@ -4000,7 +3830,7 @@ impl Render for Launcher {
                 .line_height(px(theme::WORDMARK.px * 0.5))
                 .font_weight(FontWeight::BOLD)
                 .text_color(t.ink)
-                .children("HORIZON".chars().enumerate().map(|(i, c)| {
+                .children("ANOMA".chars().enumerate().map(|(i, c)| {
                     let at = held - i as f32 * theme::STAGGER.as_secs_f32() * 1.5;
                     let p = ease_out_cubic(at / theme::ENTER.as_secs_f32());
                     div()
@@ -4077,7 +3907,7 @@ impl Launcher {
         (reveal, held.as_secs_f32())
     }
 
-    /// `horizon-launcher benchmark`: scroll the page a little on every frame, back to the top at
+    /// `anoma-launcher benchmark`: scroll the page a little on every frame, back to the top at
     /// the bottom, so the frame times measure scrolling.
     fn bench_scroll(&mut self, window: &mut Window) {
         let handle = &self.content_scroll.handle;
@@ -4097,7 +3927,7 @@ impl Launcher {
     }
 }
 
-actions!(horizon_launcher, [Quit, CloseWindow]);
+actions!(anoma_launcher, [Quit, CloseWindow]);
 
 /// What closing the last window does: stop the servers this launcher started, send the telemetry,
 /// exit. A game that is running keeps running. Cmd+Q goes through here too.
@@ -4125,8 +3955,8 @@ fn key_bindings() -> Vec<KeyBinding> {
 fn menus() -> Vec<Menu> {
     vec![
         Menu {
-            name: "Horizon Launcher".into(),
-            items: vec![MenuItem::action("Quit Horizon Launcher", Quit)],
+            name: "Anoma Launcher".into(),
+            items: vec![MenuItem::action("Quit Anoma Launcher", Quit)],
         },
         Menu {
             name: "Window".into(),
@@ -4143,8 +3973,8 @@ fn main() {
     perf::process_started();
     backend::exe_path();
     // What the launcher downloads goes through the player's proxy, if they set one: the parts
-    // that build their own agents (`horizon-port-pack`) are told before anything starts.
-    horizon_launcher::proxy::announce(horizon_launcher::backend::Settings::load().proxy);
+    // that build their own agents (`anoma-port-pack`) are told before anything starts.
+    anoma_launcher::proxy::announce(anoma_launcher::backend::Settings::load().proxy);
     if let Some(code) = cli::run() {
         std::process::exit(code);
     }
@@ -4153,13 +3983,13 @@ fn main() {
         .run(|cx: &mut App| {
             cx.text_system()
                 .add_fonts(vec![
-                    Cow::Borrowed(horizon_theme::fonts::GEIST_REGULAR),
-                    Cow::Borrowed(horizon_theme::fonts::GEIST_MEDIUM),
-                    Cow::Borrowed(horizon_theme::fonts::GEIST_SEMIBOLD),
-                    Cow::Borrowed(horizon_theme::fonts::GEIST_MONO),
-                    Cow::Borrowed(horizon_theme::fonts::PIXEL_MEDIUM),
-                    Cow::Borrowed(horizon_theme::fonts::PIXEL_SEMIBOLD),
-                    Cow::Borrowed(horizon_theme::fonts::PIXEL_BOLD),
+                    Cow::Borrowed(anoma_theme::fonts::GEIST_REGULAR),
+                    Cow::Borrowed(anoma_theme::fonts::GEIST_MEDIUM),
+                    Cow::Borrowed(anoma_theme::fonts::GEIST_SEMIBOLD),
+                    Cow::Borrowed(anoma_theme::fonts::GEIST_MONO),
+                    Cow::Borrowed(anoma_theme::fonts::PIXEL_MEDIUM),
+                    Cow::Borrowed(anoma_theme::fonts::PIXEL_SEMIBOLD),
+                    Cow::Borrowed(anoma_theme::fonts::PIXEL_BOLD),
                 ])
                 .expect("bundled fonts");
             cx.bind_keys(key_bindings());
@@ -4182,7 +4012,7 @@ fn main() {
                     titlebar: Some(titlebar::options()),
                     #[cfg(target_os = "linux")]
                     window_decorations: Some(gpui::WindowDecorations::Client),
-                    app_id: Some("horizon-launcher".into()),
+                    app_id: Some("anoma-launcher".into()),
                     ..Default::default()
                 },
                 |window, cx| cx.new(|cx| Launcher::new(window, cx)),
@@ -4225,10 +4055,10 @@ mod tests {
     #[test]
     fn the_app_menu_has_quit() {
         let menus = super::menus();
-        assert_eq!(menus[0].name, "Horizon Launcher");
+        assert_eq!(menus[0].name, "Anoma Launcher");
         assert!(matches!(
             &menus[0].items[0],
-            gpui::MenuItem::Action { name, .. } if name == "Quit Horizon Launcher"
+            gpui::MenuItem::Action { name, .. } if name == "Quit Anoma Launcher"
         ));
     }
 

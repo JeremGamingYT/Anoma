@@ -9,7 +9,7 @@ NOW = "2026-10-28T12:00:00+00:00"
 PATTERNS = ns.guarded_patterns((Path(__file__).resolve().parents[1] / ".github/CODEOWNERS").read_text())
 
 
-def pr(n, head="h", state="open", files=("crates/horizon-world/src/lib.rs",), base="main"):
+def pr(n, head="h", state="open", files=("crates/anoma-world/src/lib.rs",), base="main"):
     return ns.PullRequest(n, state, f"{head}{n}", f"Fix {n}", f"dev{n}", base, list(files))
 
 
@@ -111,15 +111,15 @@ class UntrustedBuildTests(unittest.TestCase):
     def test_an_untrusted_build_never_runs_on_the_release_runner(self):
         runs_on = [line for line in self.game.splitlines() if "runs-on:" in line]
         self.assertEqual(len(runs_on), 2)
-        pr_runner = "fromJSON('[\"self-hosted\", \"macOS\", \"horizon-game\"]')"
+        pr_runner = "fromJSON('[\"self-hosted\", \"macOS\", \"anoma-game\"]')"
         for line in runs_on:
             self.assertIn(f"inputs.trusted && vars.MAC_RUNNER || {pr_runner}", line)
 
     def test_a_trusted_build_never_reads_the_shared_sccache(self):
         calls = self.game.count("bash tools/ci/runner-env.sh")
-        self.assertEqual(self.game.count("HORIZON_NO_SCCACHE: ${{ inputs.trusted && '1' || '' }}"), calls)
+        self.assertEqual(self.game.count("ANOMA_NO_SCCACHE: ${{ inputs.trusted && '1' || '' }}"), calls)
         env = (Path(__file__).resolve().parents[1] / "tools/ci/runner-env.sh").read_text()
-        self.assertEqual(env.count('-z "${HORIZON_NO_SCCACHE:-}"'), 2)
+        self.assertEqual(env.count('-z "${ANOMA_NO_SCCACHE:-}"'), 2)
 
 
 class PruneBuildsTests(unittest.TestCase):

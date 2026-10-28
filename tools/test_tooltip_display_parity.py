@@ -26,7 +26,7 @@ if __name__ == '__main__':
         'tooltip-display-parity', 'VanillaTooltipDisplayOracle', 'tooltip_display_fixture', cases,
         'Diamond sword name and attribute tooltip visibility for hide_tooltip, hidden_components, and creative flags',
         sources=[
-            lab.ROOT / 'crates/horizon-client/src/game/stations.rs',
-            lab.ROOT / 'crates/horizon-client/src/item_tooltip.rs',
+            lab.ROOT / 'crates/anoma-client/src/game/stations.rs',
+            lab.ROOT / 'crates/anoma-client/src/item_tooltip.rs',
         ],
         expected_lines=6)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""End-to-end check of agent control: play Horizon with horizon-ctl.
+"""End-to-end check of agent control: play Anoma with anoma-ctl.
 
 A script creates a world through the title menus, finds a tree it can walk to, breaks a log,
 checks the inventory, crafts planks in the inventory screen, places one and reads it back. It
-runs through the CLI (one horizon-ctl process per command) and through `horizon-ctl mcp` with a
+runs through the CLI (one anoma-ctl process per command) and through `anoma-ctl mcp` with a
 small JSON-RPC client, and saves a screenshot of each run. The ui scenario drives the menus by
 widget id instead: the title screen, the options (a slider set by id) and the inventory's slots;
 the options scenario reads and sets options.txt values by key; the events scenario waits for
@@ -12,7 +12,7 @@ golden apple, milk, honey, chorus fruit) and checks their effects, remainders an
 pick scenario middle-clicks slots (AbstractContainerScreen's cloning): a full stack in creative, from
 the hotbar and from an item tab, and nothing in survival; the suggestions scenario checks
 slash-command Tab completion on single player's connected client after a fresh launch; the no-ai
-scenario turns No AI on in a scratch game home and checks that horizon-ctl, its MCP server and the
+scenario turns No AI on in a scratch game home and checks that anoma-ctl, its MCP server and the
 game's control socket all refuse.
 
     python3 tools/agent_control_e2e.py                 # both modes
@@ -21,9 +21,9 @@ game's control socket all refuse.
     python3 tools/agent_control_e2e.py --scenario ui   # menus by widget id only (a minute)
 
 Needs vscreen on Linux (the desktop); on macOS the game renders offscreen, so it also runs in a
-locked session or over SSH. It needs the prepared resources in .local/horizon-client and a build of
-horizon-client and horizon-ctl (built with the fast profile unless --bin-dir is given). Games
-started here have no audio (HORIZON_NO_AUDIO=1).
+locked session or over SSH. It needs the prepared resources in .local/anoma-client and a build of
+anoma-client and anoma-ctl (built with the fast profile unless --bin-dir is given). Games
+started here have no audio (ANOMA_NO_AUDIO=1).
 """
 import argparse
 import base64
@@ -68,11 +68,11 @@ class Failed(Exception):
 
 
 def game_env(screen, home=None):
-    """The environment of a game: lab.game_env with HORIZON_HOME `home` (a scratch folder when None), no live-count
+    """The environment of a game: lab.game_env with ANOMA_HOME `home` (a scratch folder when None), no live-count
     ping, and on Linux the virtual screen `screen`."""
-    extra = {'HORIZON_TELEMETRY_URL': 'off'}  # no live-count ping from test games
+    extra = {'ANOMA_TELEMETRY_URL': 'off'}  # no live-count ping from test games
     if home is not None:
-        extra['HORIZON_HOME'] = home
+        extra['ANOMA_HOME'] = home
     if sys.platform == 'darwin':
         return lab.game_env(**extra)
     if not shutil.which('vscreen') and os.environ.get('DISPLAY'):
@@ -89,7 +89,7 @@ def game_env(screen, home=None):
 
 
 class Cli:
-    """One horizon-ctl process per command, as a shell script would."""
+    """One anoma-ctl process per command, as a shell script would."""
     name = 'cli'
 
     def __init__(self, ctl, socket, cwd, env):
@@ -123,7 +123,7 @@ class Cli:
 
 
 class Mcp:
-    """`horizon-ctl mcp` driven over JSON-RPC, as an AI agent's client would."""
+    """`anoma-ctl mcp` driven over JSON-RPC, as an AI agent's client would."""
     name = 'mcp'
 
     def __init__(self, ctl, socket, cwd, env):
@@ -133,7 +133,7 @@ class Mcp:
         self.cwd = cwd
         init = self.rpc('initialize', {'protocolVersion': '2025-06-18', 'capabilities': {},
                                        'clientInfo': {'name': 'agent_control_e2e', 'version': '1'}})
-        assert init['serverInfo']['name'] == 'horizon-ctl', init
+        assert init['serverInfo']['name'] == 'anoma-ctl', init
         self.notify('notifications/initialized')
         self.tools = {t['name']: t for t in self.rpc('tools/list', {})['tools']}
         print(f'[mcp] {len(self.tools)} tools: {", ".join(sorted(self.tools))}')
@@ -597,7 +597,7 @@ def manage_scenario(d, out):
     assert 'speed' in effects, effects
     d('xp', levels=5)
     assert d('lan', action='status') is not None
-    d('options', page='horizon')
+    d('options', page='anoma')
     assert 'graphics' in widgets(d), widgets(d).keys()
     d('close')
     d('pause')
@@ -634,20 +634,20 @@ def scratch(mode, resources):
     """A scratch game home with the prepared resources, and the game's environment for it."""
     work = Path(tempfile.mkdtemp(prefix=f'hzac-{mode}-'))
     (work / '.local').mkdir()
-    (work / '.local/horizon-client').mkdir()
-    os.symlink(resources, work / '.local/horizon-client' / lab.VERSION)
-    # horizon-ctl reads No AI in the game home: this one, not the player's.
+    (work / '.local/anoma-client').mkdir()
+    os.symlink(resources, work / '.local/anoma-client' / lab.VERSION)
+    # anoma-ctl reads No AI in the game home: this one, not the player's.
     env = game_env(os.environ.get('VSCREEN', 'agent-control'), home=work)
     return work, env
 
 
 def no_ai_check(mode, ctl, resources):
-    """No AI on: horizon-ctl refuses (exit 4, kind denied), so does its MCP server, and the game
+    """No AI on: anoma-ctl refuses (exit 4, kind denied), so does its MCP server, and the game
     started with --control-socket never opens it."""
     work, env = scratch(mode, resources)
     socket = work / 'c.sock'
     try:
-        (work / 'horizon-extras.txt').write_text('fps:true\nnoAi:true\n')
+        (work / 'anoma-extras.txt').write_text('fps:true\nnoAi:true\n')
         if mode == 'cli':
             for words in (['state'], ['launch', '--world', 'NoAi'], ['logs']):
                 r = subprocess.run([str(ctl), '--socket', str(socket), *words], cwd=work, env=env,
@@ -655,7 +655,7 @@ def no_ai_check(mode, ctl, resources):
                 reply = json.loads(r.stdout.strip().splitlines()[-1])
                 log(mode, words, reply)
                 assert r.returncode == 4 and reply == {'error': REFUSAL, 'kind': 'denied'}, (r.returncode, reply)
-            client = ctl.with_name('horizon-client')
+            client = ctl.with_name('anoma-client')
             args = [str(client), '--control-socket', str(socket), '--world', 'NoAi', '--world-frames', '30']
             if sys.platform == 'darwin':
                 args.append('--offscreen')
@@ -669,11 +669,11 @@ def no_ai_check(mode, ctl, resources):
             r = subprocess.run([str(ctl), '--socket', str(socket), 'mcp'], cwd=work, env=env, input='',
                                capture_output=True, text=True, timeout=60)
             log(mode, ['mcp'], {'exit': r.returncode, 'stderr': r.stderr.strip()})
-            assert r.returncode == 4 and r.stderr.strip() == f'horizon-ctl mcp: {REFUSAL}', r
+            assert r.returncode == 4 and r.stderr.strip() == f'anoma-ctl mcp: {REFUSAL}', r
             # Turned on during a session: the next call refuses.
-            (work / 'horizon-extras.txt').write_text('noAi:false\n')
+            (work / 'anoma-extras.txt').write_text('noAi:false\n')
             m = Mcp(ctl, socket, work, env)
-            (work / 'horizon-extras.txt').write_text('noAi:true\n')
+            (work / 'anoma-extras.txt').write_text('noAi:true\n')
             try:
                 m('state')
                 raise AssertionError('state ran under No AI')
@@ -690,14 +690,14 @@ def no_ai_check(mode, ctl, resources):
 
 
 def setting_check(mode, ctl, out, resources):
-    """Agent Control turned on in Horizon Settings > AI Agent: the game the player starts (no
+    """Agent Control turned on in Anoma Settings > AI Agent: the game the player starts (no
     --control) opens the default endpoint, the page shows the agent connected, Copy Connection
     Details copies the socket, and turning the switch off closes the endpoint at once."""
     work, env = scratch(mode, resources)
     socket = work / 'c.sock'
-    env['HORIZON_CONTROL'] = str(socket)  # the default endpoint, this home's
-    (work / 'horizon-extras.txt').write_text('agentControl:true\n')
-    args = [str(ctl.with_name('horizon-client'))]
+    env['ANOMA_CONTROL'] = str(socket)  # the default endpoint, this home's
+    (work / 'anoma-extras.txt').write_text('agentControl:true\n')
+    args = [str(ctl.with_name('anoma-client'))]
     if sys.platform == 'darwin':
         args.append('--offscreen')
     game = subprocess.Popen(args, cwd=work, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -710,10 +710,10 @@ def setting_check(mode, ctl, out, resources):
             time.sleep(0.5)
         d = (Cli if mode == 'cli' else Mcp)(ctl, socket, work, env)
         assert d('state')['screen'] == 'title'  # the player's own game, at its title screen
-        d('options', page='horizon')
+        d('options', page='anoma')
         tree = widgets(d)
         assert {'ai-agent', 'no-ai'} <= set(tree), sorted(tree)
-        d('screenshot', path=str(out / f'{mode}-horizon-settings.png'))
+        d('screenshot', path=str(out / f'{mode}-anoma-settings.png'))
         d('options', page='agent')
         tree = widgets(d)
         switch = next(w for w in tree.values() if w.get('label', '').startswith('Agent Control'))
@@ -730,7 +730,7 @@ def setting_check(mode, ctl, out, resources):
         while socket.exists():
             assert time.time() < deadline, 'Agent Control off, but the socket stayed'
             time.sleep(0.5)
-        assert 'agentControl:false' in (work / 'horizon-extras.txt').read_text()
+        assert 'agentControl:false' in (work / 'anoma-extras.txt').read_text()
         assert game.poll() is None, 'the game exited when Agent Control went off'
         print(f'[{mode}] PASS: setting')
         return True
@@ -785,25 +785,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--mode', choices=['cli', 'mcp', 'both'], default='both')
     parser.add_argument('--scenario', choices=[*SCENARIOS, 'no-ai', 'setting', 'all'], default='all')
-    parser.add_argument('--bin-dir', help='prebuilt horizon-client and horizon-ctl (default: build with the fast profile)')
+    parser.add_argument('--bin-dir', help='prebuilt anoma-client and anoma-ctl (default: build with the fast profile)')
     parser.add_argument('--out', default=str(ROOT / '.local/agent-control-e2e'), help='screenshots go here')
     args = parser.parse_args()
     if args.bin_dir:
         bins = Path(args.bin_dir).resolve()
     else:
-        subprocess.run(['cargo', 'build', '--locked', '--profile', 'fast', '-p', 'horizon-client', '--bins'],
+        subprocess.run(['cargo', 'build', '--locked', '--profile', 'fast', '-p', 'anoma-client', '--bins'],
                        cwd=ROOT, check=True)
         meta = json.loads(subprocess.run(['cargo', 'metadata', '--format-version', '1', '--no-deps'], cwd=ROOT,
                                          capture_output=True, text=True, check=True).stdout)
         bins = Path(meta['target_directory']) / 'fast'
     resources = (lab.RESOURCES).resolve()
-    if not (resources / 'horizon-resources.json').exists():
+    if not (resources / 'anoma-resources.json').exists():
         sys.exit(f'no prepared resources in {resources}')
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     modes = ['cli', 'mcp'] if args.mode == 'both' else [args.mode]
     scenarios = [*SCENARIOS, 'no-ai', 'setting'] if args.scenario == 'all' else [args.scenario]
-    results = {f'{m}/{s}': run(m, bins / 'horizon-ctl', out, resources, s) for m in modes for s in scenarios}
+    results = {f'{m}/{s}': run(m, bins / 'anoma-ctl', out, resources, s) for m in modes for s in scenarios}
     print(json.dumps(results))
     sys.exit(0 if all(results.values()) else 1)
 

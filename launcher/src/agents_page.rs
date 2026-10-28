@@ -1,9 +1,9 @@
-//! Settings' AI rows: the No AI switch (`horizon_core::no_ai`, shared with the game) and "Connect
+//! Settings' AI rows: the No AI switch (`anoma_core::no_ai`, shared with the game) and "Connect
 //! an AI agent", the ready-made MCP config of each common client with Copy buttons, a one-click
 //! add where the client has a CLI (run only on that click, its command shown first), and a test
 //! that starts the MCP server and lists its tools. With No AI on, only the switch shows.
 use super::*;
-use horizon_launcher::agents;
+use anoma_launcher::agents;
 
 #[derive(Default)]
 pub(crate) struct AgentsUi {
@@ -33,9 +33,9 @@ impl Launcher {
             Some(
                 div()
                     .child(if on {
-                        "On: every AI feature is hidden and off. The game opens no control socket, and horizon-ctl and the MCP servers refuse."
+                        "On: every AI feature is hidden and off. The game opens no control socket, and anoma-ctl and the MCP servers refuse."
                     } else {
-                        "Hides and turns off every AI feature: agent control of the launcher and the game, horizon-ctl and the MCP servers."
+                        "Hides and turns off every AI feature: agent control of the launcher and the game, anoma-ctl and the MCP servers."
                     })
                     .into_any_element(),
             ),
@@ -103,7 +103,7 @@ impl Launcher {
             .line_height(px(21.))
             .child(text(theme::HEADING).text_color(t.ink).child("Connect an AI agent"))
             .child(div().max_w(px(640.)).text_color(t.muted).child(
-                "Your own agent (Claude Code, Codex, Cursor or any MCP client) can drive the launcher and the game it starts, with the same commands as the terminal. It runs on your computer and talks to Horizon there; it asks before deleting anything.",
+                "Your own agent (Claude Code, Codex, Cursor or any MCP client) can drive the launcher and the game it starts, with the same commands as the terminal. It runs on your computer and talks to Anoma there; it asks before deleting anything.",
             ))
             .child(picker);
         if let Some((program, args)) = client.add.clone() {
@@ -167,7 +167,7 @@ impl Launcher {
                         let exe = backend::exe_path().to_path_buf();
                         let task = cx.background_executor().spawn(async move {
                             match agents::self_test(&exe) {
-                                Ok(n) => (true, format!("The MCP server answered with {n} tools. Now ask your agent: \"Say hello from Horizon\".")),
+                                Ok(n) => (true, format!("The MCP server answered with {n} tools. Now ask your agent: \"Say hello from Anoma\".")),
                                 Err(e) => (false, format!("The MCP server did not answer: {e}")),
                             }
                         });
@@ -191,30 +191,20 @@ impl Launcher {
                     .child(message.clone()),
             );
         }
-        Some(
-            section.child(
-                div()
-                    .id("agent-docs")
-                    .text_color(t.accent)
-                    .cursor_pointer()
-                    .hover(|s| s.opacity(0.8))
-                    .child("What an agent can do, and the commands")
-                    .on_click(|_, _, cx| cx.open_url(backend::AGENT_DOCS_URL)),
-            ),
-        )
+        Some(section)
     }
 }
 
 /// Runs a client's add command; (went well, what it said).
 fn run_add(program: &str, args: &[String]) -> (bool, String) {
-    match horizon_launcher::process::command(agents::locate(program))
+    match anoma_launcher::process::command(agents::locate(program))
         .args(args)
         .output()
     {
         Ok(out) if out.status.success() => (
             true,
             format!(
-                "Added. Restart {program} if it is open, then ask it: \"Say hello from Horizon\"."
+                "Added. Restart {program} if it is open, then ask it: \"Say hello from Anoma\"."
             ),
         ),
         Ok(out) => (

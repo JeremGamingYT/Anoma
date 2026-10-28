@@ -80,6 +80,152 @@ dependencies = [
 ]
 
 [[package]]
+name = "anoma-bench"
+version = "0.1.0"
+dependencies = [
+ "anoma-telemetry",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "anoma-core"
+version = "0.1.0"
+dependencies = [
+ "libm",
+]
+
+[[package]]
+name = "anoma-friends"
+version = "0.1.0"
+dependencies = [
+ "chacha20poly1305",
+ "getrandom 0.3.4",
+ "hkdf",
+ "if-addrs",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "socket2 0.5.10",
+ "spake2",
+]
+
+[[package]]
+name = "anoma-launcher"
+version = "0.2.0"
+dependencies = [
+ "anoma-bench",
+ "anoma-core",
+ "anoma-friends",
+ "anoma-mods",
+ "anoma-port-pack",
+ "anoma-prepare",
+ "anoma-release-sign",
+ "anoma-telemetry",
+ "anoma-theme",
+ "anoma-world",
+ "base64",
+ "chrono",
+ "clap",
+ "dirs 5.0.1",
+ "flate2",
+ "futures-lite 2.6.1",
+ "getrandom 0.3.4",
+ "gpui",
+ "image",
+ "keyring",
+ "objc2-app-kit",
+ "oo7",
+ "pulldown-cmark",
+ "raw-window-handle",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2 0.10.9",
+ "sys-locale",
+ "tar",
+ "toml 1.1.8+spec-1.1.0",
+ "trash",
+ "ureq",
+ "winresource",
+ "zip",
+]
+
+[[package]]
+name = "anoma-mods"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "toml 1.1.8+spec-1.1.0",
+ "zip",
+]
+
+[[package]]
+name = "anoma-port-pack"
+version = "0.1.0"
+dependencies = [
+ "anoma-mods",
+ "serde",
+ "serde_json",
+ "sha1",
+ "toml 1.1.8+spec-1.1.0",
+ "ureq",
+ "zip",
+]
+
+[[package]]
+name = "anoma-prepare"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "libc",
+ "regex",
+ "sha1",
+ "sha2 0.10.9",
+ "zip",
+]
+
+[[package]]
+name = "anoma-release-sign"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "ring",
+]
+
+[[package]]
+name = "anoma-telemetry"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "ruzstd",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
+name = "anoma-theme"
+version = "0.1.0"
+
+[[package]]
+name = "anoma-world"
+version = "0.1.0"
+dependencies = [
+ "anoma-core",
+ "flate2",
+ "libm",
+ "lz4_flex",
+ "postcard",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "anstream"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -574,16 +720,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
 dependencies = [
- "bit-vec 0.8.0",
-]
-
-[[package]]
-name = "bit-set"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09ec2f926cc3060f09db9ebc5b52823d85268d24bb917e472c0c4bea35780a7d"
-dependencies = [
- "bit-vec 0.9.1",
+ "bit-vec",
 ]
 
 [[package]]
@@ -591,12 +728,6 @@ name = "bit-vec"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
-
-[[package]]
-name = "bit-vec"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71798fca2c1fe1086445a7258a4bc81e6e49dcd24c8d0dd9a1e57395b603f51"
 
 [[package]]
 name = "bit_field"
@@ -635,7 +766,7 @@ dependencies = [
  "ash-window",
  "bitflags 2.13.2",
  "bytemuck",
- "codespan-reporting 0.12.0",
+ "codespan-reporting",
  "glow",
  "gpu-alloc",
  "gpu-alloc-ash",
@@ -645,7 +776,7 @@ dependencies = [
  "libloading",
  "log",
  "mint",
- "naga 25.0.1",
+ "naga",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -1078,15 +1209,6 @@ checksum = "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
 dependencies = [
  "serde",
  "termcolor",
- "unicode-width",
-]
-
-[[package]]
-name = "codespan-reporting"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af491d569909a7e4dee0ad7db7f5341fef5c614d5b8ec8cf765732aba3cff681"
-dependencies = [
  "unicode-width",
 ]
 
@@ -2360,7 +2482,7 @@ dependencies = [
  "log",
  "lyon",
  "metal",
- "naga 25.0.1",
+ "naga",
  "num_cpus",
  "objc",
  "oo7",
@@ -2625,11 +2747,6 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
-dependencies = [
- "foldhash 0.2.0",
- "serde",
- "serde_core",
-]
 
 [[package]]
 name = "heck"
@@ -2697,170 +2814,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "horizon-bench"
-version = "0.1.0"
-dependencies = [
- "horizon-telemetry",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "horizon-core"
-version = "0.1.0"
-dependencies = [
- "libm",
-]
-
-[[package]]
-name = "horizon-friends"
-version = "0.1.0"
-dependencies = [
- "chacha20poly1305",
- "getrandom 0.3.4",
- "hkdf",
- "if-addrs",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "socket2 0.5.10",
- "spake2",
-]
-
-[[package]]
-name = "horizon-launcher"
-version = "0.2.0"
-dependencies = [
- "base64",
- "chrono",
- "clap",
- "dirs 5.0.1",
- "flate2",
- "futures-lite 2.6.1",
- "getrandom 0.3.4",
- "gpui",
- "horizon-bench",
- "horizon-core",
- "horizon-friends",
- "horizon-mods",
- "horizon-port-pack",
- "horizon-prepare",
- "horizon-release-sign",
- "horizon-telemetry",
- "horizon-theme",
- "horizon-world",
- "image",
- "keyring",
- "objc2-app-kit",
- "oo7",
- "pulldown-cmark",
- "raw-window-handle",
- "self-replace",
- "serde",
- "serde_json",
- "sha1",
- "sha2 0.10.9",
- "sys-locale",
- "tar",
- "toml 1.1.8+spec-1.1.0",
- "trash",
- "ureq",
- "winresource",
- "zip",
-]
-
-[[package]]
-name = "horizon-mods"
-version = "0.1.0"
-dependencies = [
- "horizon-shader-api",
- "log",
- "minisign-verify",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "toml 1.1.8+spec-1.1.0",
- "wasmparser",
- "zip",
-]
-
-[[package]]
-name = "horizon-port-pack"
-version = "0.1.0"
-dependencies = [
- "horizon-mods",
- "serde",
- "serde_json",
- "sha1",
- "toml 1.1.8+spec-1.1.0",
- "ureq",
- "zip",
-]
-
-[[package]]
-name = "horizon-prepare"
-version = "0.1.0"
-dependencies = [
- "crc32fast",
- "libc",
- "regex",
- "sha1",
- "sha2 0.10.9",
- "zip",
-]
-
-[[package]]
-name = "horizon-release-sign"
-version = "0.1.0"
-dependencies = [
- "base64",
- "ring",
-]
-
-[[package]]
-name = "horizon-shader-api"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "naga 30.0.1",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "toml 1.1.8+spec-1.1.0",
- "zip",
-]
-
-[[package]]
-name = "horizon-telemetry"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "ruzstd",
- "serde",
- "serde_json",
- "ureq",
-]
-
-[[package]]
-name = "horizon-theme"
-version = "0.1.0"
-
-[[package]]
-name = "horizon-world"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "horizon-core",
- "libm",
- "lz4_flex",
- "postcard",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -3614,12 +3567,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
-name = "minisign-verify"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "871285dc19d8d0ebe0eef3d0e99a205f2a71363b122632cbbfa4a6c370a960ce"
-
-[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3679,10 +3626,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b977c445f26e49757f9aca3631c3b8b836942cb278d69a92e7b80d3b24da632"
 dependencies = [
  "arrayvec",
- "bit-set 0.8.0",
+ "bit-set",
  "bitflags 2.13.2",
  "cfg_aliases",
- "codespan-reporting 0.12.0",
+ "codespan-reporting",
  "half",
  "hashbrown 0.15.5",
  "hexf-parse",
@@ -3691,48 +3638,10 @@ dependencies = [
  "num-traits",
  "once_cell",
  "rustc-hash 1.1.0",
- "spirv 0.3.0+sdk-1.3.268.0",
+ "spirv",
  "strum 0.26.3",
  "thiserror 2.0.21",
  "unicode-ident",
-]
-
-[[package]]
-name = "naga"
-version = "30.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a616d2fb8c89516ac2723a581f69d6c18576046bed761bd6b305e5618e6ae130"
-dependencies = [
- "arrayvec",
- "bit-set 0.10.0",
- "bitflags 2.13.2",
- "cfg-if",
- "cfg_aliases",
- "codespan-reporting 0.13.1",
- "half",
- "hashbrown 0.17.1",
- "indexmap",
- "libm",
- "log",
- "naga-types",
- "num-traits",
- "once_cell",
- "rustc-hash 1.1.0",
- "spirv 0.4.0+sdk-1.4.341.0",
- "thiserror 2.0.21",
- "unicode-ident",
-]
-
-[[package]]
-name = "naga-types"
-version = "30.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "590afbf58a6f4f62873cd5cff4468061844bafa1cdf399cc954537c22d768d49"
-dependencies = [
- "hashbrown 0.17.1",
- "indexmap",
- "rustc-hash 1.1.0",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -5249,17 +5158,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "self-replace"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03ec815b5eab420ab893f63393878d89c90fdd94c0bcc44c07abb8ad95552fb7"
-dependencies = [
- "fastrand 2.5.0",
- "tempfile",
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "self_cell"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5587,15 +5485,6 @@ name = "spirv"
 version = "0.3.0+sdk-1.3.268.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eda41003dc44290527a59b13432d4a0379379fa074b70174882adfbdfd917844"
-dependencies = [
- "bitflags 2.13.2",
-]
-
-[[package]]
-name = "spirv"
-version = "0.4.0+sdk-1.4.341.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9571ea910ebd84c86af4b3ed27f9dbdc6ad06f17c5f96146b2b671e2976744f"
 dependencies = [
  "bitflags 2.13.2",
 ]
@@ -6733,19 +6622,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "wasmparser"
-version = "0.254.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5ff8685b587722894b6f25958fc608d315b93b8d23647bfb567664e7006d757"
-dependencies = [
- "bitflags 2.13.2",
- "hashbrown 0.17.1",
- "indexmap",
- "semver",
- "serde",
 ]
 
 [[package]]

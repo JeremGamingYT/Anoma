@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "anoma_bench",
+  "version": "1.0.0",
+  "name": "Anoma benchmark driver",
+  "description": "Dev-only: flies the vanilla client along tools/perf_bench.py's paths and records frame times. Never shipped.",
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.anomalab.bench.VanillaBench"
+    ]
+  },
+  "mixins": [
+    "anoma_bench.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3"
+  }
+}

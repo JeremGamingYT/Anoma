@@ -1,13 +1,11 @@
 //! Instances: separate game folders, each with its own worlds, options and packs.
 //!
 //! Nothing that exists moves. The game's home (`backend::game_home`) stays the default instance,
-//! "Horizon", with its saves and options where they are. Imported modpacks (`ports/<pack>/home/`)
-//! and registry modpacks (`horizon-packs/<id>/home/`) are instances too, played from their own
-//! folders as before. New instances get `instances/<slug>/` in the game's home. What the player
+//! "Anoma", with its saves and options where they are. Imported modpacks (`ports/<pack>/home/`)
+//! are instances too, played from their own folders as before. New instances get `instances/<slug>/` in the game's home. What the player
 //! chooses about an instance (its name, icon, group) is kept in `instances.json` in the
 //! launcher's data folder, so renaming one never moves a folder.
 use crate::backend;
-use crate::browser::horizon::pack as registry_pack;
 use crate::launch::Launch;
 use crate::modpacks;
 use serde::{Deserialize, Serialize};
@@ -18,7 +16,7 @@ use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// The default instance's id: the game's home itself.
-pub const DEFAULT: &str = "horizon";
+pub const DEFAULT: &str = "anoma";
 const FILE: &str = "instances.json";
 /// Where new instances live, in the game's home.
 const OWN: &str = "instances";
@@ -31,8 +29,6 @@ pub enum Kind {
     Own,
     /// An imported Java modpack (modpacks.rs).
     Port,
-    /// A modpack from Horizon's registry.
-    Pack,
 }
 
 /// What an instance shows in the sidebar: a block or item texture from the player's prepared
@@ -88,7 +84,7 @@ pub struct Meta {
     pub icon: Option<Icon>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
-    /// The Horizon version this instance plays, kept when newer ones are installed. None: the
+    /// The Anoma version this instance plays, kept when newer ones are installed. None: the
     /// launcher's own version, which follows updates.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
@@ -130,7 +126,7 @@ impl Store {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instance {
-    /// `horizon`, an own instance's folder name, `port:<pack>` or `pack:<id>`.
+    /// `anoma`, an own instance's folder name, `port:<pack>` or `pack:<id>`.
     pub id: String,
     pub name: String,
     pub kind: Kind,
@@ -140,7 +136,7 @@ pub struct Instance {
     pub home: PathBuf,
     pub icon: Option<Icon>,
     pub group: Option<String>,
-    /// Its pinned Horizon version, if any (`Meta::version`).
+    /// Its pinned Anoma version, if any (`Meta::version`).
     pub version: Option<String>,
     pub played: Duration,
     pub last_played: Option<SystemTime>,
@@ -155,7 +151,7 @@ impl Instance {
         match (requested, &self.version) {
             (None, Some(pinned)) => backend::resolve_version(Some(pinned)).map_err(|_| {
                 format!(
-                    "{} plays {pinned}, which is not installed: install it, or horizon-launcher \
+                    "{} plays {pinned}, which is not installed: install it, or anoma-launcher \
                      instance version \"{}\" latest",
                     self.name, self.name
                 )
@@ -165,7 +161,7 @@ impl Instance {
     }
 }
 
-/// The instances, by the default game home and the launcher's data folder: Horizon first, then
+/// The instances, by the default game home and the launcher's data folder: Anoma first, then
 /// by group and name.
 pub fn list() -> Vec<Instance> {
     list_in(&backend::game_home(), &backend::data_dir())
@@ -175,7 +171,7 @@ fn list_in(game_home: &Path, data: &Path) -> Vec<Instance> {
     let store = Store::load(data);
     let mut found = vec![(
         DEFAULT.to_string(),
-        "Horizon".to_string(),
+        "Anoma".to_string(),
         Kind::Default,
         game_home.to_path_buf(),
         game_home.to_path_buf(),
@@ -201,10 +197,6 @@ fn list_in(game_home: &Path, data: &Path) -> Vec<Instance> {
             p.work,
             home,
         ));
-    }
-    for p in registry_pack::list_in(&game_home.join("horizon-packs")) {
-        let home = registry_pack::home(&p.work);
-        found.push((format!("pack:{}", p.id), p.name, Kind::Pack, p.work, home));
     }
     let mut out: Vec<Instance> = found
         .into_iter()
@@ -244,10 +236,10 @@ fn find_in(all: &[Instance], query: &str) -> Result<Instance, String> {
         .or_else(|| all.iter().find(|i| i.name.eq_ignore_ascii_case(q)))
         .or_else(|| all.iter().find(|i| bare(&i.id) == q))
         .cloned()
-        .ok_or_else(|| format!("No instance {q}: horizon-launcher instance list shows them"))
+        .ok_or_else(|| format!("No instance {q}: anoma-launcher instance list shows them"))
 }
 
-/// The instance Play starts: the one picked in the launcher, else Horizon.
+/// The instance Play starts: the one picked in the launcher, else Anoma.
 pub fn selected() -> Instance {
     let all = list();
     backend::Settings::load()
@@ -269,18 +261,17 @@ pub fn select(query: &str) -> Result<Instance, String> {
 const NOT_COPIED: &[&str] = &[
     OWN,
     "ports",
-    "horizon-packs",
     "logs",
     "crash-reports",
     "sessions",
     "telemetry",
     "mod-browser",
-    ".horizon-cache",
+    ".anoma-cache",
 ];
 
 /// Files of the player, not of one instance, that a new instance starts with: the keys and video
 /// settings, and the offline name (so the player stays the same player in its worlds).
-const PLAYER_FILES: &[&str] = &["options.txt", "horizon-player.txt"];
+const PLAYER_FILES: &[&str] = &["options.txt", "anoma-player.txt"];
 
 /// Creates an instance named `name`: empty but for the player's options and offline name, or a
 /// copy of `from`'s game folder (its worlds, options and packs). Nothing of `from` changes.
@@ -308,7 +299,7 @@ fn create_in(
     if all.iter().any(|i| i.name.eq_ignore_ascii_case(name)) {
         return Err(format!("There is already an instance called {name}."));
     }
-    if let Some(from) = from.filter(|f| matches!(f.kind, Kind::Port | Kind::Pack)) {
+    if let Some(from) = from.filter(|f| f.kind == Kind::Port) {
         return Err(format!(
             "{} plays its pack's mods: import the pack again for a second copy.",
             from.name
@@ -465,9 +456,9 @@ pub fn apply(cmd: &mut Command, instance: &Instance) -> Result<(), String> {
             fs::create_dir_all(&instance.home)
                 .map_err(|e| format!("{}: {e}", instance.home.display()))?;
             cmd.current_dir(&instance.home)
-                .env("HORIZON_HOME", &instance.home);
+                .env("ANOMA_HOME", &instance.home);
         }
-        Kind::Port | Kind::Pack => modpacks::apply_profile(cmd, &instance.work)?,
+        Kind::Port => modpacks::apply_profile(cmd, &instance.work)?,
     }
     follow_player(&backend::game_home(), &instance.home);
     Ok(())
@@ -479,15 +470,15 @@ fn follow_player(game_home: &Path, home: &Path) {
             let _ = fs::copy(game_home.join(f), home.join(f));
         }
     }
-    let consent = horizon_telemetry::consent::Consent::path(game_home);
+    let consent = anoma_telemetry::consent::Consent::path(game_home);
     if consent.is_file() {
-        let to = horizon_telemetry::consent::Consent::path(home);
+        let to = anoma_telemetry::consent::Consent::path(home);
         let _ = fs::create_dir_all(to.parent().unwrap());
         let _ = fs::copy(consent, to);
     }
-    let no_ai = horizon_core::no_ai::is_on(game_home);
-    if horizon_core::no_ai::is_on(home) != no_ai {
-        let _ = horizon_core::no_ai::set(home, no_ai);
+    let no_ai = anoma_core::no_ai::is_on(game_home);
+    if anoma_core::no_ai::is_on(home) != no_ai {
+        let _ = anoma_core::no_ai::set(home, no_ai);
     }
 }
 

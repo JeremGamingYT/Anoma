@@ -9,7 +9,7 @@ name: release
 # Windows on GitHub, macOS on the Mac mini's runner (MAC_RUNNER=macos-latest sends it to GitHub), then
 # publishes vX.Y.Z on the release line in .github/release-line.txt (docs/versioning.md; without it, the dated
 # vYYYY.MM.DD[.N] from before 0.2) with notes from the merged pull requests, as the release and GitHub's latest: one
-# channel, which launchers, `horizon-server update` and install.sh follow at once. So it is published only after the
+# channel, which launchers, `anoma-server update` and install.sh follow at once. So it is published only after the
 # checks that used to gate a promotion pass in this run: the Mac mini's smoke test drew a world, and no release-blocker
 # is open (tools/release_train.py gate); otherwise nothing is published. macOS: with the repository variable
 # MACOS_SIGN_IDENTITY set, the programs are signed with
@@ -109,7 +109,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: horizon-*
+          pattern: anoma-*
           merge-multiple: true
       - name: Sign the checksums (SHA256SUMS, SHA256SUMS.sig)
         env:
@@ -118,8 +118,8 @@ jobs:
           EPHEMERAL: ${{ needs.decide.outputs.dry_run == 'true' && 'yes' || '' }}
           TAG: ${{ needs.decide.outputs.tag }}
         run: |
-          bash tools/ci/sign_release.sh "$TAG" dist/horizon-linux-x86_64.tar.gz dist/horizon-windows-x64.zip \
-            dist/horizon-macos-arm64.zip dist/horizon-server-linux-x86_64.tar.gz
+          bash tools/ci/sign_release.sh "$TAG" dist/anoma-linux-x86_64.tar.gz dist/anoma-windows-x64.zip \
+            dist/anoma-macos-arm64.zip dist/anoma-server-linux-x86_64.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: signature
@@ -161,7 +161,7 @@ jobs:
           EPHEMERAL: ${{ needs.decide.outputs.dry_run == 'true' && 'yes' || '' }}
         run: |
           key=(); [[ -n "$EPHEMERAL" ]] && key=(--key "$(cat dist/ephemeral.pub)")
-          cargo run --locked --quiet -p horizon-release-sign -- verify --tag "$TAG" --publishing "${key[@]}" dist
+          cargo run --locked --quiet -p anoma-release-sign -- verify --tag "$TAG" --publishing "${key[@]}" dist
       - name: Ready to publish (the smoke test passed, no release-blocker is open)
         # Right before publishing: an issue labelled while the builds ran still holds this release. A dry run only
         # reports what a real run would do.
@@ -185,10 +185,10 @@ jobs:
           # files for the download (#1647). Launchers, servers and install.sh match the name, which stays.
           gh release create "$TAG" --target "${{ needs.decide.outputs.head }}" --title "$(cat notes/title.txt)" \
             --notes-file notes/body.md --latest \
-            "dist/horizon-linux-x86_64.tar.gz#Game files the launcher installs: Linux (horizon-linux-x86_64.tar.gz)" \
-            "dist/horizon-windows-x64.zip#Game files the launcher installs: Windows (horizon-windows-x64.zip)" \
-            "dist/horizon-macos-arm64.zip#Game files the launcher installs: macOS (horizon-macos-arm64.zip)" \
-            "dist/horizon-server-linux-x86_64.tar.gz#Dedicated server for Linux (horizon-server-linux-x86_64.tar.gz)" \
+            "dist/anoma-linux-x86_64.tar.gz#Game files the launcher installs: Linux (anoma-linux-x86_64.tar.gz)" \
+            "dist/anoma-windows-x64.zip#Game files the launcher installs: Windows (anoma-windows-x64.zip)" \
+            "dist/anoma-macos-arm64.zip#Game files the launcher installs: macOS (anoma-macos-arm64.zip)" \
+            "dist/anoma-server-linux-x86_64.tar.gz#Dedicated server for Linux (anoma-server-linux-x86_64.tar.gz)" \
             dist/SHA256SUMS "${signature[@]}" dist/smoke-test.json
       - name: Dry run, the release that would be published
         if: needs.decide.outputs.dry_run == 'true'

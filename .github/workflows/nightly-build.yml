@@ -22,8 +22,8 @@ run-name: nightly build${{ inputs.request && format(' (request {0})', inputs.req
 #   which stays locked for nightlies).
 # - `sign` is the only job with RELEASE_SIGNING_KEY. It checks out nothing but main's tools/ci/sign_release.sh, which
 #   runs the runner's sha256sum and OpenSSL over the archives: it hashes them, never runs them. The signed message
-#   names the channel ("horizon release nightly"), so a nightly's signature can't pass for a release's.
-# - `publish` verifies the signature with main's horizon-release-sign, checks the smoke test, and only then moves
+#   names the channel ("anoma release nightly"), so a nightly's signature can't pass for a release's.
+# - `publish` verifies the signature with main's anoma-release-sign, checks the smoke test, and only then moves
 #   the tag. Like sign, it never executes what build produced.
 #   gh workflow run "nightly build"                     # now (skips when the pick is the same commit as last night's)
 #   gh workflow run "nightly build" -f force=true       # build and publish even if unchanged
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: horizon-*
+          pattern: anoma-*
           merge-multiple: true
       - name: Sign the checksums (SHA256SUMS, SHA256SUMS.sig) for the nightly channel
         env:
@@ -143,8 +143,8 @@ jobs:
           RELEASE_SIGNING_KEY_NEXT: ${{ secrets.RELEASE_SIGNING_KEY_NEXT }}
           EPHEMERAL: ${{ needs.pick.outputs.dry_run == 'true' && 'yes' || '' }}
         run: |
-          bash tools/ci/sign_release.sh nightly dist/horizon-linux-x86_64.tar.gz dist/horizon-windows-x64.zip \
-            dist/horizon-macos-arm64.zip dist/horizon-server-linux-x86_64.tar.gz
+          bash tools/ci/sign_release.sh nightly dist/anoma-linux-x86_64.tar.gz dist/anoma-windows-x64.zip \
+            dist/anoma-macos-arm64.zip dist/anoma-server-linux-x86_64.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: signature
@@ -177,7 +177,7 @@ jobs:
           EPHEMERAL: ${{ needs.pick.outputs.dry_run == 'true' && 'yes' || '' }}
         run: |
           key=(); [[ -n "$EPHEMERAL" ]] && key=(--key "$(cat dist/ephemeral.pub)")
-          cargo run --locked --quiet -p horizon-release-sign -- verify --tag nightly --publishing "${key[@]}" dist
+          cargo run --locked --quiet -p anoma-release-sign -- verify --tag nightly --publishing "${key[@]}" dist
       - name: The smoke test drew a world
         # No release-blocker check: a nightly is how blockers get tested.
         run: python3 tools/release_train.py gate --kind game --smoke dist/smoke-test.json
@@ -194,10 +194,10 @@ jobs:
           # A pre-release, never GitHub's latest: launchers on the release channel never see it.
           gh release create nightly --prerelease --latest=false --target "$SHA" \
             --title "Nightly $DATE · ${SHA:0:7}" --notes-file dist/nightly-notes.md \
-            "dist/horizon-linux-x86_64.tar.gz#Nightly game files: Linux (horizon-linux-x86_64.tar.gz)" \
-            "dist/horizon-windows-x64.zip#Nightly game files: Windows (horizon-windows-x64.zip)" \
-            "dist/horizon-macos-arm64.zip#Nightly game files: macOS (horizon-macos-arm64.zip)" \
-            "dist/horizon-server-linux-x86_64.tar.gz#Nightly dedicated server for Linux (horizon-server-linux-x86_64.tar.gz)" \
+            "dist/anoma-linux-x86_64.tar.gz#Nightly game files: Linux (anoma-linux-x86_64.tar.gz)" \
+            "dist/anoma-windows-x64.zip#Nightly game files: Windows (anoma-windows-x64.zip)" \
+            "dist/anoma-macos-arm64.zip#Nightly game files: macOS (anoma-macos-arm64.zip)" \
+            "dist/anoma-server-linux-x86_64.tar.gz#Nightly dedicated server for Linux (anoma-server-linux-x86_64.tar.gz)" \
             dist/SHA256SUMS "${signature[@]}" dist/smoke-test.json
           python3 tools/ci/nightly.py prune --days 7
       - name: Dry run, the nightly that would be published

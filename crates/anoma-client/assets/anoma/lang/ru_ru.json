@@ -1,0 +1,15 @@
+{
+  "anoma.options.controller": "Геймпад",
+  "anoma.options.vibration": "Вибрация",
+  "anoma.options.adaptive_triggers": "Адаптивные триггеры",
+  "anoma.options.lightbar": "Подсветка",
+  "anoma.options.look_sensitivity": "Чувствительность обзора",
+  "anoma.options.invert_x": "Инверсия обзора по X",
+  "anoma.options.invert_y": "Инверсия обзора по Y",
+  "anoma.options.sneak_button": "Кнопка приседания",
+  "anoma.options.move_deadzone": "Мёртвая зона движения",
+  "anoma.options.look_deadzone": "Мёртвая зона обзора",
+  "anoma.options.button_glyphs": "Символы кнопок",
+  "anoma.options.menu_navigation": "Навигация по меню",
+  "anoma.options.on_screen_keyboard": "Экранная клавиатура"
+}

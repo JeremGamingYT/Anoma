@@ -1,8 +1,8 @@
 //! Who plays: the top bar's quick switch (a menu under the account chip) and Settings' offline
-//! names (`horizon_launcher::account::Accounts::offline`).
+//! names (`anoma_launcher::account::Accounts::offline`).
 use super::servers_page::Field;
 use super::*;
-use horizon_launcher::account::Player;
+use anoma_launcher::account::Player;
 
 impl Launcher {
     /// The chip's two lines: the name that plays, and how.

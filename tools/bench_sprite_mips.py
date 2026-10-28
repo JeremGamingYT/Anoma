@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--label', default='candidate')
     parser.add_argument('--resources', type=Path, default=lab.RESOURCES)
     args = parser.parse_args()
-    path = 'crates/horizon-client/src/gfx.rs'
+    path = 'crates/anoma-client/src/gfx.rs'
     source = (subprocess.check_output(['git', 'show', f'{args.ref}:{path}'], cwd=ROOT, text=True)
               if args.ref else (ROOT / path).read_text())
     build = ROOT / '.local/sprite-mips-bench' / args.label
@@ -49,14 +49,14 @@ def main():
         code += source[source.index('const ANIMATION_MIP_BUDGET'):source.index('#[cfg(test)]\nmod sprite_upload_tests')]
     else:
         code += function(source, 'animate_sprites')
-    baseline = subprocess.check_output(['git', 'show', '89b58991bbc02eb79b6965fc4ca56357fe2297d9:crates/horizon-client/src/gfx.rs'], cwd=ROOT, text=True)
+    baseline = subprocess.check_output(['git', 'show', '89b58991bbc02eb79b6965fc4ca56357fe2297d9:crates/anoma-client/src/gfx.rs'], cwd=ROOT, text=True)
     code += '\n' + function(baseline, 'animate_sprites').replace('fn animate_sprites(', 'fn reference_animate_sprites(', 1)
     if args.test:
         # sprites.rs holds it since the gfx -> sprites cut; older refs kept it in gfx.rs.
         code += '\n' + (function(source, 'sprite_mipmap_limit') if 'fn sprite_mipmap_limit' in source
                          else 'use sprites::sprite_mipmap_limit;')
         code += '\n' + source[source.index('#[cfg(test)]\nmod sprite_upload_tests'):]
-    modules = '\n'.join(f'#[path = {json.dumps(str(ROOT / "crates/horizon-client/src" / (name + ".rs")))}] mod {name};'
+    modules = '\n'.join(f'#[path = {json.dumps(str(ROOT / "crates/anoma-client/src" / (name + ".rs")))}] mod {name};'
                         for name in ('mipmap', 'sprites', 'fast_hash'))
     (build / 'main.rs').write_text(modules + '\nuse sprites::SpriteAnimation;\n'
                                   + code + '\n' + (ROOT / 'tools/bench_sprite_mips.rs').read_text())
@@ -69,7 +69,7 @@ edition = "2024"
 name = "sprite-mips-{args.label}"
 path = "main.rs"
 [dependencies]
-horizon-assets = {{ path = "{ROOT / 'crates/horizon-assets'}" }}
+anoma-assets = {{ path = "{ROOT / 'crates/anoma-assets'}" }}
 png = "0.18"
 serde_json = {{ version = "1.0.151", features = ["raw_value"] }}
 log = "0.4"

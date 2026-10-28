@@ -65,7 +65,7 @@ links = ["#1"]
 '''
 
 
-def pull(state, merged_at=None, paths=("crates/horizon-client/src/game.rs",)):
+def pull(state, merged_at=None, paths=("crates/anoma-client/src/game.rs",)):
     return {"kind": "PullRequest", "state": state, "merged_at": merged_at, "merge_commit": "abc" if merged_at else None,
             "paths": list(paths)}
 
@@ -117,7 +117,7 @@ class Rules(unittest.TestCase):
                                                                            shipped_in="soon")))
 
     def test_links_are_issues_urls_or_repository_paths(self):
-        self.assertEqual(self.problems(links=["#4", "https://playhorizon.dev", "docs/benchmark.md"]), [])
+        self.assertEqual(self.problems(links=["#4", "https://playanoma.dev", "docs/benchmark.md"]), [])
         self.assertTrue(any("link" in p for p in self.problems(links=["docs/nothing-here.md"])))
         self.assertTrue(any("link" in p for p in self.problems(links=["http://example.com"])))
 
@@ -147,9 +147,9 @@ class Render(unittest.TestCase):
         self.assertIn("## Recently shipped", text)
         self.assertNotIn("## Later", text)
         self.assertIn("- **Fast**: Faster.", text)
-        self.assertIn("Multiply, not divide ([#10](https://github.com/horizon-rust/horizon/issues/10)).", text)
+        self.assertIn("Multiply, not divide ([#10](https://github.com/JeremGamingYT/Anoma/issues/10)).", text)
         # A link the technical text already gives isn't repeated; the others are listed after it.
-        self.assertIn("More: [#12](https://github.com/horizon-rust/horizon/issues/12)", text)
+        self.assertIn("More: [#12](https://github.com/JeremGamingYT/Anoma/issues/12)", text)
         self.assertIn("- **Old** (v0.2.1): Done.", text)
 
 

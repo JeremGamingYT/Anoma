@@ -1,9 +1,9 @@
-//! Instances in the window (`horizon_launcher::instances`): the sidebar's list, by group, and the
+//! Instances in the window (`anoma_launcher::instances`): the sidebar's list, by group, and the
 //! dialog that makes one (empty, or a copy of the selected one) or changes its name, group and
 //! icon.
 use super::*;
 use gpui::RenderImage;
-use horizon_launcher::instances::{self, Icon, Instance, Kind as InstanceKind};
+use anoma_launcher::instances::{self, Icon, Instance, Kind as InstanceKind};
 use servers_page::Field;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -37,7 +37,7 @@ const TEXTURES: [&str; 24] = [
     "book",
 ];
 
-/// Colours offered as icons: Horizon's accent and a few that sit beside it in both themes.
+/// Colours offered as icons: Anoma's accent and a few that sit beside it in both themes.
 const COLOURS: [&str; 8] = [
     "#5b3fd6", "#3f7fd6", "#2f9e8f", "#4f9e2f", "#c9a227", "#d9732f", "#c4405a", "#7d7591",
 ];
@@ -205,7 +205,6 @@ impl Launcher {
                         summary.map_or_else(|| tr("Modpack").into(), |p| p.summary()),
                     )
                 }
-                InstanceKind::Pack => (false, tr("From Horizon's registry").into()),
             };
             let dot = matches!(i.kind, InstanceKind::Default | InstanceKind::Own).then(|| {
                 div()
@@ -250,7 +249,6 @@ impl Launcher {
                             InstanceKind::Port => {
                                 this.show_modpack(Some(clicked.id["port:".len()..].into()))
                             }
-                            InstanceKind::Pack => this.show_modpack(None),
                         }
                         cx.notify();
                     }))
@@ -349,7 +347,7 @@ impl Launcher {
         );
         let from = self
             .selected_instance()
-            .map_or_else(|| "Horizon".into(), |i| i.name.clone());
+            .map_or_else(|| "Anoma".into(), |i| i.name.clone());
         let row = |label: &'static str, control: AnyElement| {
             div()
                 .flex()
