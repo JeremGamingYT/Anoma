@@ -329,6 +329,27 @@ struct Options {
     /// What this Game executes; independent of its current server connection.
     execution_role: execution_role::ExecutionRole,
 }
+/// Where the prepared resources are when `--resources` isn't given, the
+/// first that holds `anoma-resources.json`:
+/// 1. `resources/` beside the program (a release);
+/// 2. `.local/anoma-client/<version>` in the program's folder or any folder
+///    above it (a build in a checkout, `target/<profile>/`), so the game
+///    starts whatever folder it was started from;
+/// 3. else that same path under the working folder, which the error then names.
+fn default_resources(exe_dir: &std::path::Path) -> PathBuf {
+    let prepared = std::path::Path::new(".local/anoma-client").join(anoma_core::VANILLA_VERSION);
+    let has_manifest = |dir: &std::path::Path| dir.join("anoma-resources.json").is_file();
+    let sibling = exe_dir.join("resources");
+    if has_manifest(&sibling) {
+        return sibling;
+    }
+    exe_dir
+        .ancestors()
+        .map(|dir| dir.join(&prepared))
+        .find(|dir| has_manifest(dir))
+        .unwrap_or(prepared)
+}
+
 impl Options {
     /// The name to join servers with: the one given, else the offline name kept
     /// next to options.txt (created on first use).
@@ -341,16 +362,10 @@ impl Options {
         })
     }
     fn read() -> Result<Option<Self>> {
-        let sibling = std::env::current_exe()?
-            .parent()
-            .ok_or("missing executable directory")?
-            .join("resources");
+        let exe = std::env::current_exe()?;
+        let exe_dir = exe.parent().ok_or("missing executable directory")?;
         let mut o = Self {
-            resources: if sibling.join("anoma-resources.json").exists() {
-                sibling
-            } else {
-                std::path::Path::new(".local/anoma-client").join(anoma_core::VANILLA_VERSION)
-            },
+            resources: default_resources(exe_dir),
             distance: 12,
             distance_override: None,
             seed: 0,
@@ -15514,6 +15529,21 @@ mod tests {
     use super::*;
     use anoma_client::container_screen::{Button, Clicks, Release, Target};
     use anoma_client::keymapping::{KeyAction, SPRINT, ToggleKeys};
+
+    /// A build in a checkout (`<repo>/target/fast/anoma-client.exe`) finds
+    /// `<repo>/.local/anoma-client/<version>` whatever the working folder.
+    #[test]
+    fn resources_are_found_above_the_program_folder() {
+        let repo = std::env::temp_dir().join(format!("anoma-res-{}", std::process::id()));
+        let exe_dir = repo.join("target").join("fast");
+        let prepared = repo.join(".local/anoma-client").join(anoma_core::VANILLA_VERSION);
+        std::fs::create_dir_all(&exe_dir).unwrap();
+        std::fs::create_dir_all(&prepared).unwrap();
+        assert!(default_resources(&exe_dir).is_relative(), "nothing prepared yet");
+        std::fs::write(prepared.join("anoma-resources.json"), "{}").unwrap();
+        assert_eq!(default_resources(&exe_dir), prepared);
+        std::fs::remove_dir_all(&repo).unwrap();
+    }
 
     #[test]
     fn sleep_fade_lasts_ten_ticks_after_waking() {
