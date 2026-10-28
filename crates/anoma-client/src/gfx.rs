@@ -10,7 +10,7 @@ use crate::{
     sprites::SpriteAnimation,
 };
 use glam::{DVec3, Mat4, Vec3, Vec4};
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
+use std::{path::PathBuf, sync::Arc, time::Instant};
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
@@ -491,7 +491,8 @@ pub struct Renderer {
     outline: wgpu::Buffer,
     depth: wgpu::TextureView,
     sections: resident::Resident<SectionGpu>,
-    lods: HashMap<crate::lod::TileKey, lod::Tile>,
+    /// Far tiles, looked up a few times per drawn tile each frame: Fx hashed.
+    lods: crate::fast_hash::FxHashMap<crate::lod::TileKey, lod::Tile>,
     /// The chunk columns the resident tiles leave out (`Lod::take_cutout`):
     /// their sections are drawn even past the render distance, so terrain
     /// leaving it never opens a hole before the tiles fill it in.
@@ -2636,7 +2637,7 @@ impl Renderer {
             outline,
             depth,
             sections: resident::Resident::default(),
-            lods: HashMap::new(),
+            lods: Default::default(),
             lod_cutout: Default::default(),
             lod_retiring: Default::default(),
             lod_pending: None,
