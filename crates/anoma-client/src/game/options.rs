@@ -202,12 +202,26 @@ impl Game<'_> {
         let events = self.ui.options.bind_mouse(&mut self.settings, button);
         self.handle_option_events(events)
     }
+    /// Once a frame: writes the options a change left unsaved, once they
+    /// have settled (`DeferredSave`), or at once with `now` (the game stops).
+    pub(super) fn flush_settings(&mut self, now: bool) {
+        let save = &mut self.ui.options.save;
+        let due = if now {
+            save.take_pending()
+        } else {
+            save.take_due(std::time::Instant::now())
+        };
+        if due {
+            self.settings.save(&Self::options_path());
+        }
+    }
     pub(super) fn handle_option_events(&mut self, events: Vec<Event>) -> Result<()> {
         for e in events {
             match e {
                 Event::ButtonClick => self.audio.play_button_click(),
                 Event::Changed => {
-                    self.settings.save(&Self::options_path());
+                    // Written once the options settle (`flush_settings`).
+                    self.ui.options.save.request(std::time::Instant::now());
                     self.apply_settings();
                     self.sync_mods();
                     self.sync_agent_control();
@@ -220,6 +234,7 @@ impl Game<'_> {
                 }
                 Event::Close if self.ui.options.resource_error.is_some() => {}
                 Event::Close => {
+                    self.ui.options.save.take_pending();
                     self.settings.save(&Self::options_path());
                     self.screen = if std::mem::take(&mut self.options_to_world_options) {
                         Screen::WorldOptions

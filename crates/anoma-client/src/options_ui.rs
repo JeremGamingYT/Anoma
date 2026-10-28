@@ -988,6 +988,44 @@ pub struct OptionsUi {
     pub graphics: crate::graphics_ui::GraphicsUi,
     /// The AI Agent page's status lines (set by the game while it shows).
     pub agent_status: Vec<String>,
+    /// The options files to write once the options stop changing.
+    pub save: DeferredSave,
+}
+
+/// How long the options must stay still before a change is written.
+pub const SAVE_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// The options files' write, put off while the options keep changing.
+/// Writing them (five files, on the render thread) at every step of a
+/// dragged slider stalled each frame; vanilla saves when the screen closes.
+/// A change asks for a save; the game writes the files once the options
+/// have been still for [`SAVE_DELAY`], or at once when the screen closes.
+#[derive(Debug, Default)]
+pub struct DeferredSave {
+    /// When the last unsaved change was made.
+    changed: Option<Instant>,
+}
+impl DeferredSave {
+    /// An option changed: the save waits for the options to settle.
+    pub fn request(&mut self, now: Instant) {
+        self.changed = Some(now);
+    }
+    /// Whether a save is waiting and the options have settled by `now`;
+    /// true clears the request, so the caller writes the files once.
+    pub fn take_due(&mut self, now: Instant) -> bool {
+        let due = self
+            .changed
+            .is_some_and(|at| now.saturating_duration_since(at) >= SAVE_DELAY);
+        if due {
+            self.changed = None;
+        }
+        due
+    }
+    /// Whether a save was waiting, which is now the caller's to write
+    /// (the screen closes, or the game stops): nothing is left waiting.
+    pub fn take_pending(&mut self) -> bool {
+        self.changed.take().is_some()
+    }
 }
 impl Default for OptionsUi {
     fn default() -> Self {
@@ -1017,6 +1055,7 @@ impl Default for OptionsUi {
             center_language: false,
             graphics: Default::default(),
             agent_status: Vec::new(),
+            save: DeferredSave::default(),
         }
     }
 }
@@ -1287,10 +1326,7 @@ impl OptionsUi {
                         open("Shader Packs...", Page::ShaderPacks),
                         Some(open("Controller Settings...", Page::Controller)),
                     ),
-                    Row::Buttons(
-                        open("Extras...", Page::Extras),
-                        Some(open("Mods...", Page::Mods)),
-                    ),
+                    Row::Buttons(open("Extras...", Page::Extras), None),
                     // No AI hides the AI Agent page and everything AI.
                     Row::Buttons(
                         self.extra_button(s, crate::extras::Item::DiscordPresence),
@@ -1596,10 +1632,8 @@ impl OptionsUi {
                     ("options.resourcepack", Some(Page::Packs)),
                     ("options.accessibility", Some(Page::Accessibility)),
                     // Vanilla's Telemetry Data and Credits slots: Anoma's
-                    // settings and its mods, as a mod adds its button here.
-                    // Credits & Attribution (WinScreen's credits) follows them.
+                    // settings, then Credits & Attribution (WinScreen's credits).
                     ("Anoma Settings...", Some(Page::Anoma)),
-                    ("Mods...", Some(Page::Mods)),
                     ("options.credits_and_attribution", Some(Page::Credits)),
                 ];
                 let rows = entries.len().div_ceil(2) as f32;
@@ -2848,6 +2882,36 @@ impl OptionsUi {
 }
 
 #[cfg(test)]
+mod deferred_save_tests {
+    use super::*;
+
+    #[test]
+    fn a_save_waits_until_the_options_settle_and_runs_once() {
+        let start = Instant::now();
+        let mut save = DeferredSave::default();
+        assert!(!save.take_due(start + SAVE_DELAY), "nothing changed");
+        save.request(start);
+        let half = SAVE_DELAY / 2;
+        assert!(!save.take_due(start + half), "still changing");
+        // Another step of the slider puts the save off again.
+        save.request(start + half);
+        assert!(!save.take_due(start + SAVE_DELAY));
+        assert!(save.take_due(start + half + SAVE_DELAY));
+        assert!(!save.take_due(start + SAVE_DELAY * 4), "written once");
+    }
+
+    #[test]
+    fn closing_the_screen_leaves_nothing_waiting() {
+        let start = Instant::now();
+        let mut save = DeferredSave::default();
+        save.request(start);
+        assert!(save.take_pending());
+        assert!(!save.take_pending());
+        assert!(!save.take_due(start + SAVE_DELAY * 2));
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -3052,11 +3116,11 @@ mod tests {
         let mut s = Settings::default();
         let mut ui = OptionsUi::default();
         let size = (480.0, 240.0);
-        assert!(ui.layout(&s, size.0, size.1).0.iter().any(|w| {
+        // No button opens the page any more; it is still reachable (ui.show).
+        assert!(!ui.layout(&s, size.0, size.1).0.iter().any(|w| {
             matches!(
                 w.kind,
                 WKind::Button {
-                    active: true,
                     act: Act::Push(Page::Mods),
                     ..
                 }
@@ -4143,13 +4207,11 @@ mod tests {
                 })
                 .collect()
         };
-        // Vanilla's Options buttons, Anoma's two in the Telemetry and Credits slots, then
-        // Credits & Attribution (WinScreen's credits).
+        // Vanilla's Options buttons, Anoma Settings in the Telemetry slot, then
+        // Credits & Attribution (WinScreen's credits). No Mods button.
         let main = pushes(&mut ui);
-        assert_eq!(
-            &main[main.len() - 3..],
-            [Page::Anoma, Page::Mods, Page::Credits]
-        );
+        assert_eq!(&main[main.len() - 2..], [Page::Anoma, Page::Credits]);
+        assert!(!main.contains(&Page::Mods));
         ui.push(Page::Anoma);
         assert_eq!(
             pushes(&mut ui),
@@ -4159,7 +4221,6 @@ mod tests {
                 Page::ShaderPacks,
                 Page::Controller,
                 Page::Extras,
-                Page::Mods,
                 Page::Agent,
             ]
         );

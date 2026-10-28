@@ -345,6 +345,20 @@ impl Loading {
         self.settings.save(&Game::options_path());
     }
 
+    /// Once a frame: writes the options a change left unsaved, once they
+    /// have settled (`DeferredSave`), or at once with `now`.
+    pub(super) fn flush_menu_settings(&mut self, now: bool) {
+        let save = &mut self.menu.options.save;
+        let due = if now {
+            save.take_pending()
+        } else {
+            save.take_due(std::time::Instant::now())
+        };
+        if due {
+            self.save_menu_settings();
+        }
+    }
+
     fn open_menu_options(&mut self, page: Page) {
         self.menu.options.open_at(false, page);
         self.menu.options.languages = anoma_client::lang::available(&[&self.menu.root]);
@@ -358,13 +372,15 @@ impl Loading {
         for event in events {
             match event {
                 Event::Changed => {
-                    self.save_menu_settings();
+                    // Written once the options settle (`flush_menu_settings`).
+                    self.menu.options.save.request(std::time::Instant::now());
                     self.apply_menu_settings();
                 }
                 Event::Close if self.menu.options.resource_error.is_some() => {}
                 Event::Close => {
                     self.menu.options_open = false;
                     self.menu.dragging = false;
+                    self.menu.options.save.take_pending();
                     self.save_menu_settings();
                 }
                 Event::Language(code) => {

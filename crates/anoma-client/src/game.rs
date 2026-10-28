@@ -13405,6 +13405,7 @@ impl ApplicationHandler for Game<'_> {
                         }
                     }
                     self.extras_frame(elapsed);
+                    self.flush_settings(false);
                     self.mods_frame(elapsed);
                     self.extras_retry()?;
                     self.apply_mouse_look();
@@ -14968,6 +14969,7 @@ fn write_report(game: &Game<'_>) -> Result<()> {
 
 fn run_event_loop(mut game: Game<'_>) -> Result<()> {
     EventLoop::new()?.run_app(&mut game)?;
+    game.flush_settings(true);
     anoma_client::discord_presence::stop();
     write_report(&game)?;
     if let Some(e) = game.error.take() {
@@ -15102,6 +15104,7 @@ impl Loading {
             event_loop.exit();
             return;
         }
+        self.flush_menu_settings(false);
         if let Err(error) = self.poll_menu_resources() {
             self.error = Some(error);
             event_loop.exit();
@@ -15149,6 +15152,8 @@ impl Loading {
         }
     }
     fn finish(&mut self, loaded: Loaded) -> Result<Option<Game<'static>>> {
+        // The game starts from options.txt: a change still waiting is written first.
+        self.flush_menu_settings(true);
         let handoff_at = Instant::now();
         let mut options = self.options.take().ok_or("loading already finished")?;
         options.resources = loaded.root.clone();
@@ -15332,6 +15337,10 @@ fn run_loading(
     };
     let mut app = App::Loading(Box::new(loading));
     EventLoop::new()?.run_app(&mut app)?;
+    match &mut app {
+        App::Ready(game) => game.flush_settings(true),
+        App::Loading(loading) => loading.flush_menu_settings(true),
+    }
     anoma_client::discord_presence::stop();
     match app {
         App::Ready(mut game) => {
