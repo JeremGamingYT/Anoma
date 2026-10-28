@@ -196,24 +196,32 @@ impl MotionWorld<'_, '_, '_> {
     pub fn fluid_base_tick(&mut self) -> Result<()> {
         self.player.fluids.was_eye_in_water = self.player.is_eye_in_fluid(WATER);
         self.update_fluids()?;
-        self.player.swimming = !self.player.flying
-            && self.player.sprinting
-            && if self.player.swimming {
-                self.player.fluids.was_touching_water
-            } else {
-                self.player.is_under_water()
-                    && is_tagged(
-                        self.fluid_at(BlockPos::containing(self.player.position))
-                            .kind(),
-                        WATER,
-                    )
-            };
+        self.update_swimming();
         self.tick_remaining_fire()?;
         if self.player.is_in_lava() {
             self.player.fall_distance *= 0.5;
         }
         self.player.fluids.first_tick = false;
         Ok(())
+    }
+    /// `Player.updateSwimming` (`Entity.updateSwimming`): a sprinter keeps
+    /// swimming while in water, and starts with the eye under water and the
+    /// feet's block water; never while flying or riding (`isPassenger`).
+    pub fn update_swimming(&mut self) {
+        let p = &self.player;
+        let swimming = !p.flying
+            && !p.passenger
+            && p.sprinting
+            && if p.swimming {
+                p.fluids.was_touching_water
+            } else {
+                p.is_under_water()
+                    && is_tagged(
+                        self.fluid_at(BlockPos::containing(p.position)).kind(),
+                        WATER,
+                    )
+            };
+        self.player.swimming = swimming;
     }
     /// `Entity.updateFluidInteraction`: immersion heights, then touching water
     /// resets the fall and splashes on entry, then the currents push.

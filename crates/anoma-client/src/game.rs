@@ -5147,7 +5147,19 @@ impl Game<'_> {
             [player.velocity.x, player.velocity.y, player.velocity.z],
             [player.position.x, player.position.y, player.position.z],
         );
-        if !riding {
+        player.passenger = riding;
+        if riding {
+            // Entity.rideTick: the passenger's own tick, its vehicle moving it.
+            MotionWorld {
+                entities: &entity_collisions,
+                player,
+                scene: &mut self.world,
+                assets: &self.pack.assets,
+                collision_binding: self.collision,
+                resources: self.motion,
+            }
+            .passenger_pose_tick()?;
+        } else {
             MotionWorld {
                 entities: &entity_collisions,
                 player,

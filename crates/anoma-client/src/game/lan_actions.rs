@@ -2542,6 +2542,9 @@ impl Game<'_> {
                 resources: game.motion,
             };
             w.player.health.advance_clock();
+            // Entity.isPassenger: a guest in a vehicle neither swims nor
+            // crawls (updateSwimming, updatePlayerPose).
+            w.player.passenger = riding;
             let _ = w.fluid_base_tick();
             w.player.ground.on_ground = from_ground;
             // Player.aiStep: a flying player that isn't riding starts every tick

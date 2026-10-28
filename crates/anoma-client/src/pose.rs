@@ -138,8 +138,17 @@ impl MotionWorld<'_, '_, '_> {
             && (self.player.shift_key_down || !self.can_fit_pose(Pose::Standing)?);
         Ok(())
     }
+    /// `Player.tick` for a passenger (`Entity.rideTick`), in place of the
+    /// movement tick: `updateSwimming` stops a passenger swimming and
+    /// `updatePlayerPose` gives it the pose it wants, so a swimmer who
+    /// boards a boat sits up in it. The caller sets `player.passenger`.
+    pub fn passenger_pose_tick(&mut self) -> Result<()> {
+        self.update_swimming();
+        self.update_player_pose()
+    }
     /// Dry Player.updatePlayerPose after movement: crawl when neither standing
-    /// nor crouching fits; leave the current pose if even crawling cannot fit.
+    /// nor crouching fits (a passenger takes the pose it wants regardless);
+    /// leave the current pose if even crawling cannot fit.
     pub fn update_player_pose(&mut self) -> Result<()> {
         if !self.can_fit_pose(Pose::Swimming)? {
             return Ok(());
@@ -158,13 +167,14 @@ impl MotionWorld<'_, '_, '_> {
         } else {
             Pose::Standing
         };
-        let pose = if self.player.spectator || self.can_fit_pose(desired)? {
-            desired
-        } else if self.can_fit_pose(Pose::Crouching)? {
-            Pose::Crouching
-        } else {
-            Pose::Swimming
-        };
+        let pose =
+            if self.player.spectator || self.player.passenger || self.can_fit_pose(desired)? {
+                desired
+            } else if self.can_fit_pose(Pose::Crouching)? {
+                Pose::Crouching
+            } else {
+                Pose::Swimming
+            };
         self.player.set_pose(pose)
     }
 }

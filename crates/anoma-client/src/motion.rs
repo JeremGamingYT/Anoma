@@ -262,6 +262,9 @@ pub enum MotionEvent {
 }
 pub struct PlayerMotion {
     pub swimming: bool,
+    /// `Entity.isPassenger`: riding a vehicle (the game sets it each tick).
+    /// A passenger never swims and sits in the pose it wants.
+    pub passenger: bool,
     pub fire_ticks: i32,
     pub air: i32,
     pub respiration: i32,
@@ -526,6 +529,7 @@ impl PlayerMotion {
             pose: crate::pose::Pose::Standing,
             dimensions: crate::pose::Pose::Standing.dimensions(1.0),
             swimming: false,
+            passenger: false,
             fire_ticks: -20,
             air: 300,
             respiration: 0,
@@ -3512,6 +3516,48 @@ mod tests {
                 assert!(w.player.health.health() < 20.0);
             }
         }
+    }
+    /// A swimmer who boards a boat sits up: `updateSwimming` stops a
+    /// passenger swimming, and `updatePlayerPose` gives a passenger the pose
+    /// it wants even where standing would not fit (a block over the seat).
+    #[test]
+    fn a_swimmer_who_boards_a_boat_stops_swimming_and_sits_up() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../.local/horizon-client")
+            .join(horizon_core::VANILLA_VERSION);
+        if !root.join("movement-properties.nbt").exists() {
+            return;
+        }
+        let assets = Assets::load(&root).unwrap();
+        let render = assets.reload(&root).unwrap();
+        let binding = crate::collisions::load(&root, assets.registry).unwrap();
+        let resources = MotionResources::load(&root, &assets).unwrap();
+        let mut scene = World::test_scene(&assets, &render, 2).unwrap();
+        let stone = assets.registry.default_state("minecraft:stone").unwrap();
+        scene.set(20, 11, 20, stone).unwrap();
+        let mut player = PlayerMotion::new(&resources, Vec3::new(20.5, 10.0, 20.5)).unwrap();
+        player.sprinting = true;
+        player.swimming = true;
+        player.set_pose(crate::pose::Pose::Swimming).unwrap();
+        let mut w = MotionWorld {
+            entities: &[],
+            player: &mut player,
+            scene: &mut scene,
+            assets: &assets,
+            collision_binding: &binding,
+            resources: &resources,
+        };
+        // On foot under the block, the player keeps crawling.
+        w.player.swimming = false;
+        w.update_player_pose().unwrap();
+        assert_eq!(w.player.pose, crate::pose::Pose::Swimming);
+        w.player.swimming = true;
+        w.player.fluids.was_touching_water = true;
+        w.player.passenger = true;
+        w.passenger_pose_tick().unwrap();
+        assert!(!w.player.swimming, "a passenger never swims");
+        assert_eq!(w.player.pose, crate::pose::Pose::Standing);
+        assert_eq!(w.player.dimensions.eye_height, 1.62);
     }
     #[test]
     fn a_server_copy_of_a_riptide_spin_counts_down_and_stands_again() {
