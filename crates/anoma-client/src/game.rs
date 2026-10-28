@@ -10717,13 +10717,15 @@ impl Game<'_> {
         self.ui.chat.set_abilities(&self.gui.atlas.font, abilities);
         self.streaming.radius = self.settings.render_distance;
         // Options.biomeBlendRadius, ambientOcclusion and cutoutLeaves:
-        // LevelExtractor.allChanged when they change.
+        // LevelExtractor.allChanged when they change (and Anoma's Smart Leaves).
         let (s, st) = (&self.settings, &self.streaming);
-        let remesh = (s.biome_blend, s.smooth_lighting, s.cutout_leaves)
-            != (st.biome_blend, st.smooth_lighting, st.cutout_leaves);
+        let smart_leaves = s.anoma.smart_leaves;
+        let remesh = (s.biome_blend, s.smooth_lighting, s.cutout_leaves, smart_leaves)
+            != (st.biome_blend, st.smooth_lighting, st.cutout_leaves, st.smart_leaves);
         self.streaming.biome_blend = self.settings.biome_blend;
         self.streaming.smooth_lighting = self.settings.smooth_lighting;
         self.streaming.cutout_leaves = self.settings.cutout_leaves;
+        self.streaming.smart_leaves = smart_leaves;
         if remesh {
             self.all_sections_changed();
         }

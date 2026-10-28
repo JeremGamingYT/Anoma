@@ -249,6 +249,87 @@ mod split_tests {
         assert_eq!((mesh.sides.quads(), mesh.cutout_sides.quads()), (1, 0));
     }
 }
+#[cfg(test)]
+mod leaf_tests {
+    use super::*;
+
+    const AIR: u32 = 0;
+    const LEAVES: u32 = 1;
+    const STONE: u32 = 2;
+
+    fn tables() -> Vec<Info> {
+        let leaves = Info {
+            leaves: true,
+            ..visibility_tests::info(false)
+        };
+        vec![visibility_tests::info(false), leaves, visibility_tests::info(true)]
+    }
+
+    /// A section of `block(x, y, z)` with air around it.
+    fn section(block: impl Fn(i32, i32, i32) -> u32) -> Padded {
+        let mut pad = Padded {
+            blocks: vec![AIR; P * P * P],
+            light: Vec::new(),
+        };
+        for y in 0..16 {
+            for z in 0..16 {
+                for x in 0..16 {
+                    pad.blocks[pi(x, y, z)] = block(x, y, z);
+                }
+            }
+        }
+        pad
+    }
+
+    /// The leaf faces drawn: with cutout leaves vanilla draws all six of
+    /// every leaf block; Smart Leaves leaves the buried ones out.
+    fn leaf_faces(pad: &Padded, info: &[Info], smart: bool) -> usize {
+        let mut faces = 0;
+        for y in 0..16 {
+            for z in 0..16 {
+                for x in 0..16 {
+                    if pad.blocks[pi(x, y, z)] != LEAVES {
+                        continue;
+                    }
+                    faces += Direction::ALL
+                        .iter()
+                        .filter(|&&d| !(smart && buried_leaf_face(pad, info, [x, y, z], d)))
+                        .count();
+                }
+            }
+        }
+        faces
+    }
+
+    #[test]
+    fn a_section_full_of_leaves_keeps_an_eighth_of_its_faces() {
+        let info = tables();
+        let pad = section(|_, _, _| LEAVES);
+        assert_eq!(leaf_faces(&pad, &info, false), 4096 * 6);
+        // Along each row, only the two faces nearest each end of each side stay.
+        assert_eq!(leaf_faces(&pad, &info, true), 6 * 256 * 2);
+    }
+
+    #[test]
+    fn faces_seen_from_outside_stay() {
+        let info = tables();
+        let pad = section(|_, _, _| LEAVES);
+        // The outer face, and the face behind the first layer, seen through its gaps.
+        assert!(!buried_leaf_face(&pad, &info, [0, 5, 5], Direction::West));
+        assert!(!buried_leaf_face(&pad, &info, [1, 5, 5], Direction::West));
+        assert!(buried_leaf_face(&pad, &info, [2, 5, 5], Direction::West));
+        assert!(buried_leaf_face(&pad, &info, [0, 5, 5], Direction::East));
+        // Leaves on stone: the face over the bottom layer is buried, the one by air is not.
+        let pad = section(|_, y, _| if y < 4 { STONE } else { LEAVES });
+        assert!(buried_leaf_face(&pad, &info, [3, 5, 3], Direction::Down));
+        assert!(!buried_leaf_face(&pad, &info, [3, 4, 3], Direction::Down));
+        // A single leaf block between air keeps every face.
+        let pad = section(|x, y, z| if (x, y, z) == (8, 8, 8) { LEAVES } else { AIR });
+        assert!(Direction::ALL
+            .iter()
+            .all(|&d| !buried_leaf_face(&pad, &info, [8, 8, 8], d)));
+    }
+}
 pub const ALL_VISIBLE: u64 = (1 << 36) - 1;
 /// VisGraph.resolve: flood fill non-opaque cells and connect the faces each region touches.
 fn visibility(pad: &Padded, info: &[Info]) -> u64 {
@@ -807,6 +888,19 @@ pub struct Mesher<'a> {
     pub smooth_lighting: bool,
     /// The `cutoutLeaves` option (fancy graphics); off makes leaves opaque.
     pub cutout_leaves: bool,
+    /// Anoma's Smart Leaves (`graphics::Graphics::smart_leaves`): with
+    /// cutout leaves, faces buried in a canopy are left out (`buried_leaf_face`).
+    pub smart_leaves: bool,
+}
+/// Smart Leaves: a leaf's face toward another leaf block, when the block
+/// beyond that one is a leaf or a solid block too. Only the faces of a
+/// canopy's outer two layers are seen through its gaps, so the canopy looks
+/// as vanilla's from outside with far fewer faces inside.
+fn buried_leaf_face(pad: &Padded, info: &[Info], [x, y, z]: [i32; 3], d: Direction) -> bool {
+    let [dx, dy, dz] = d.normal();
+    let at = |k: i32| &info[pad.blocks[pi(x + k * dx, y + k * dy, z + k * dz)] as usize];
+    let beyond = at(2);
+    at(1).leaves && (beyond.leaves || beyond.solid)
 }
 impl Mesher<'_> {
     /// `region[dz][dx]` are the chunks around the meshed column (centre 1,1).
@@ -880,13 +974,16 @@ impl Mesher<'_> {
                         None => [x as f32, y as f32, z as f32],
                     };
                     let mut visible = [false; 6];
+                    let smart = self.smart_leaves && self.cutout_leaves && state.leaves;
                     for d in Direction::ALL {
                         let [dx, dy, dz] = d.normal();
                         let neighbor = pad.blocks[pi(x + dx, y + dy, z + dz)];
                         let other = &info[neighbor as usize];
                         // LeavesBlock.skipRendering with opaque leaves.
                         let opaque_leaves = !self.cutout_leaves && state.leaves && other.leaves;
+                        let buried = smart && buried_leaf_face(&pad, info, [x, y, z], d);
                         visible[d as usize] = !opaque_leaves
+                            && !buried
                             && self
                                 .visibility
                                 .should_render_face(

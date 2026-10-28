@@ -24,6 +24,7 @@ pub enum H {
     FarDetail,
     CaveCulling,
     EntityCulling,
+    SmartLeaves,
     ChunkUpdates,
     UploadBudget,
     Sky,
@@ -194,6 +195,11 @@ pub fn rows(level: Level) -> Vec<Row> {
                 Medium,
                 "Leaves with see-through gaps. Off draws them solid.",
             ),
+            h(
+                H::SmartLeaves,
+                Saves,
+                "Skips leaf faces deep inside trees. Off draws all, as vanilla.",
+            ),
             v(
                 Opt::ImprovedTransparency,
                 Medium,
@@ -326,6 +332,10 @@ fn on_off(on: bool) -> &'static str {
 fn labelled(caption: &str, value: impl std::fmt::Display) -> Text {
     Text::literal(format!("{caption}: {value}"))
 }
+/// `labelled` with a caption from the client's own language files (assets/anoma/lang).
+fn translated(key: &str, value: &str) -> Text {
+    Text::translate("options.generic_value", &[Text::translate(key, &[]), Text::literal(value)])
+}
 
 impl H {
     fn slider(self, s: &Settings) -> Option<f32> {
@@ -357,6 +367,7 @@ impl H {
             H::FarDetail => labelled("Far Detail", g.far_detail.label()),
             H::CaveCulling => labelled("Cave Culling", on_off(g.cave_culling)),
             H::EntityCulling => labelled("Entity Culling", on_off(g.entity_culling)),
+            H::SmartLeaves => translated("anoma.options.smart_leaves", on_off(g.smart_leaves)),
             H::ChunkUpdates => match g.chunk_updates {
                 0 => labelled("Chunk Updates", "Unlimited"),
                 n => labelled("Chunk Updates", format!("{n} per frame")),
@@ -436,6 +447,7 @@ impl H {
             }
             H::CaveCulling => g.cave_culling = !g.cave_culling,
             H::EntityCulling => g.entity_culling = !g.entity_culling,
+            H::SmartLeaves => g.smart_leaves = !g.smart_leaves,
             H::Sky => g.sky = !g.sky,
             H::Fog => g.fog = !g.fog,
             H::Weather => g.weather = !g.weather,
@@ -477,6 +489,7 @@ impl Item {
         Some(match self {
             Item::Anoma(H::CaveCulling) => g.cave_culling,
             Item::Anoma(H::EntityCulling) => g.entity_culling,
+            Item::Anoma(H::SmartLeaves) => g.smart_leaves,
             Item::Anoma(H::Sky) => g.sky,
             Item::Anoma(H::Fog) => g.fog,
             Item::Anoma(H::Weather) => g.weather,

@@ -242,6 +242,9 @@ pub struct Graphics {
     pub cave_culling: bool,
     /// Skip drawing entities hidden behind opaque terrain.
     pub entity_culling: bool,
+    /// With cutout leaves, leave out leaf faces buried inside a canopy
+    /// (`mesher::buried_leaf_face`). Off draws every face, as vanilla.
+    pub smart_leaves: bool,
     /// Meshed sections uploaded per frame; 0 uploads all that are ready.
     pub chunk_updates: u32,
     /// Section mesh bytes uploaded per frame, in KiB; 0 is unlimited.
@@ -284,6 +287,7 @@ impl Default for Graphics {
             far_detail: FarDetail::Full,
             cave_culling: true,
             entity_culling: false,
+            smart_leaves: false,
             chunk_updates: 0,
             upload_budget_kib: 0,
             sky: true,
@@ -333,6 +337,7 @@ impl Graphics {
                 "farDetail" => g.far_detail = FarDetail::parse(value),
                 "caveCulling" => g.cave_culling = flag(g.cave_culling),
                 "entityCulling" => g.entity_culling = flag(g.entity_culling),
+                "smartLeaves" => g.smart_leaves = flag(g.smart_leaves),
                 "chunkUpdates" => g.chunk_updates = number(g.chunk_updates).min(512),
                 "uploadBudgetKiB" => g.upload_budget_kib = number(g.upload_budget_kib).min(65536),
                 "sky" => g.sky = flag(g.sky),
@@ -370,12 +375,13 @@ impl Graphics {
     }
     pub fn serialize(&self) -> String {
         format!(
-            "preset:{}\nlodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nbatteryMode:{}\ngraphicsApi:{}\npickedShaderPack:{}\n",
+            "preset:{}\nlodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nsmartLeaves:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nbatteryMode:{}\ngraphicsApi:{}\npickedShaderPack:{}\n",
             self.preset.name(),
             self.lod_distance,
             self.far_detail.name(),
             bool_text(self.cave_culling),
             bool_text(self.entity_culling),
+            bool_text(self.smart_leaves),
             self.chunk_updates,
             self.upload_budget_kib,
             bool_text(self.sky),
@@ -449,6 +455,8 @@ pub fn apply_preset(preset: Preset, s: &mut crate::settings::Settings) {
             Preset::Ultra => (24, 12, "true", 0, true, 3, 4, 1.5, true, 10),
             Preset::Custom => return,
         };
+    // The faster presets leave buried leaf faces out; the others keep vanilla's.
+    let smart_leaves = matches!(preset, Preset::Performance | Preset::Balanced);
     s.render_distance = rd;
     s.simulation_distance = sim;
     s.clouds = clouds.into();
@@ -462,6 +470,7 @@ pub fn apply_preset(preset: Preset, s: &mut crate::settings::Settings) {
     s.graphics_preset = "custom".into();
     let g = &mut s.anoma;
     g.preset = preset;
+    g.smart_leaves = smart_leaves;
     g.cave_culling = true;
     g.animated_textures = true;
     g.chunk_updates = 0;
@@ -483,6 +492,7 @@ mod tests {
             far_detail: FarDetail::Reduced,
             cave_culling: false,
             entity_culling: true,
+            smart_leaves: true,
             chunk_updates: 12,
             upload_budget_kib: 4096,
             sky: false,
@@ -585,6 +595,18 @@ mod tests {
             let mut s = crate::settings::Settings::default();
             apply_preset(preset, &mut s);
             assert_eq!(s.anoma.far_detail, FarDetail::Full, "{preset:?}");
+        }
+    }
+
+    #[test]
+    fn smart_leaves_is_off_by_default_and_on_in_the_faster_presets() {
+        assert!(!Graphics::default().smart_leaves);
+        assert!(Graphics::parse("smartLeaves:true\n").smart_leaves);
+        for preset in Preset::ALL {
+            let mut s = crate::settings::Settings::default();
+            apply_preset(preset, &mut s);
+            let on = matches!(preset, Preset::Performance | Preset::Balanced);
+            assert_eq!(s.anoma.smart_leaves, on, "{preset:?}");
         }
     }
 

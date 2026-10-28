@@ -11,5 +11,6 @@
   "anoma.options.look_deadzone": "Look Deadzone",
   "anoma.options.button_glyphs": "Button Glyphs",
   "anoma.options.menu_navigation": "Menu Navigation",
-  "anoma.options.on_screen_keyboard": "On-Screen Keyboard"
+  "anoma.options.on_screen_keyboard": "On-Screen Keyboard",
+  "anoma.options.smart_leaves": "Smart Leaves"
 }

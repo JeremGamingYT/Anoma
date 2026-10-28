@@ -11,5 +11,6 @@
   "anoma.options.look_deadzone": "Мёртвая зона обзора",
   "anoma.options.button_glyphs": "Символы кнопок",
   "anoma.options.menu_navigation": "Навигация по меню",
-  "anoma.options.on_screen_keyboard": "Экранная клавиатура"
+  "anoma.options.on_screen_keyboard": "Экранная клавиатура",
+  "anoma.options.smart_leaves": "Умная листва"
 }

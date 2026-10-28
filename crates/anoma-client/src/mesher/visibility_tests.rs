@@ -70,7 +70,7 @@ fn reference(pad: &Padded, info: &[Info]) -> u64 {
     result
 }
 
-fn info(solid: bool) -> Info {
+pub(super) fn info(solid: bool) -> Info {
     Info {
         solid,
         full: false,

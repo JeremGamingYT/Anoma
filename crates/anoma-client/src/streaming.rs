@@ -158,6 +158,7 @@ struct MeshSettings {
     blend_radius: i32,
     smooth_lighting: bool,
     cutout_leaves: bool,
+    smart_leaves: bool,
 }
 enum Job {
     Generate(i32, i32),
@@ -271,6 +272,8 @@ pub struct Streaming {
     /// The `ao` and `cutoutLeaves` options.
     pub smooth_lighting: bool,
     pub cutout_leaves: bool,
+    /// Anoma's Smart Leaves graphics setting.
+    pub smart_leaves: bool,
     /// Incremental relighting of block edits on lit chunks (see `light::relight`).
     light_tables: Arc<LightTables>,
     /// Applied edits by sequence, replayed onto light jobs snapshotted before them.
@@ -525,6 +528,7 @@ impl Streaming {
                                         blend_radius: settings.blend_radius,
                                         smooth_lighting: settings.smooth_lighting,
                                         cutout_leaves: settings.cutout_leaves,
+                                        smart_leaves: settings.smart_leaves,
                                         assets: &context.assets,
                                         render: &context.render,
                                         tables: &context.tables,
@@ -587,6 +591,7 @@ impl Streaming {
             biome_blend: 2,
             smooth_lighting: true,
             cutout_leaves: true,
+            smart_leaves: false,
             light_tables,
             light_log: Vec::new(),
             light_edit_sequence: 0,
@@ -1268,6 +1273,7 @@ impl Streaming {
                             blend_radius: self.biome_blend,
                             smooth_lighting: self.smooth_lighting,
                             cutout_leaves: self.cutout_leaves,
+                            smart_leaves: self.smart_leaves,
                         },
                     ),
                 );
