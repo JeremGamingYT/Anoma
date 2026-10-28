@@ -195,8 +195,11 @@ struct SectionGpu {
     page: u32,
     start: u64,
     solid: u32,
-    /// Where the solid quads' buckets by facing side end (`mesher::Sides`).
+    /// Where the opaque solid quads' buckets by facing side end
+    /// (`mesher::Sides`); the cutout quads follow them.
     sides: Sides,
+    /// The cutout solid quads' buckets, counted from the first of them.
+    cutout: Sides,
     translucent: u32,
     sort: translucency::SortState,
     sorted_indices: Option<(u32, u64)>,
@@ -380,6 +383,9 @@ pub struct Renderer {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
+    /// Solid sections' opaque quads: `solid` without the alpha test, whose
+    /// `discard` would turn early depth testing off for the whole draw.
+    opaque: wgpu::RenderPipeline,
     solid: wgpu::RenderPipeline,
     translucent: wgpu::RenderPipeline,
     /// Flat section draws (`flat`), where multi-draw is emulated.
@@ -522,9 +528,14 @@ pub struct Renderer {
     /// built, and their pages.
     phase2_draws: Vec<[u32; 5]>,
     phase2_pages: Vec<(u32, Option<u32>)>,
+    /// Phase 1's draws of cutout quads, while the list is built: they go
+    /// after its opaque ones.
+    cutout_draws: Vec<[u32; 5]>,
+    cutout_pages: Vec<(u32, Option<u32>)>,
     /// Each section's solid draws, to group them by arena page.
     solid_runs: page_runs::PageRuns,
     phase2_runs: page_runs::PageRuns,
+    cutout_runs: page_runs::PageRuns,
     /// The shadow camera's draws by page, in bands of distance from the light.
     shadow_runs: page_runs::PageRuns,
     /// Block-entity blocks per meshed section (world position, state id).
@@ -1323,6 +1334,17 @@ impl Renderer {
             )
         };
         let tri = wgpu::PrimitiveTopology::TriangleList;
+        let opaque = pipeline(
+            "Terrain opaque",
+            "vs_terrain",
+            "fs_opaque",
+            &terrain_buffers,
+            tri,
+            Some(wgpu::Face::Back),
+            true,
+            true,
+            None,
+        );
         let solid = pipeline(
             "Terrain solid",
             "vs_terrain",
@@ -2534,6 +2556,7 @@ impl Renderer {
             device,
             queue,
             config,
+            opaque,
             solid,
             translucent,
             flat_on: flat.is_some(),
@@ -2635,8 +2658,11 @@ impl Renderer {
             draw_pages: Vec::new(),
             phase2_draws: Vec::new(),
             phase2_pages: Vec::new(),
+            cutout_draws: Vec::new(),
+            cutout_pages: Vec::new(),
             solid_runs: page_runs::PageRuns::default(),
             phase2_runs: page_runs::PageRuns::default(),
+            cutout_runs: page_runs::PageRuns::default(),
             shadow_runs: page_runs::PageRuns::default(),
             block_entities: Default::default(),
             block_entity_revision: next_block_entity_revision(),
@@ -2984,15 +3010,18 @@ impl Renderer {
         {
             self.queue.submit([copies]);
         }
+        // A mesh that was not sorted draws all of its solid quads as cutout ones.
+        let (sides, cutout) = if mesh.sides.quads() + mesh.cutout_sides.quads() == solid {
+            (mesh.sides, mesh.cutout_sides)
+        } else {
+            (Sides::default(), Sides::unsorted(solid))
+        };
         Some(SectionGpu {
             page,
             start,
             solid,
-            sides: if mesh.sides.quads() == solid {
-                mesh.sides
-            } else {
-                Sides::unsorted(solid)
-            },
+            sides,
+            cutout,
             translucent,
             sort: translucency::SortState::new(
                 mesh.translucent
@@ -3047,6 +3076,23 @@ impl Renderer {
             }
             i += run;
         }
+    }
+    /// Draws the solid list's draws before `end`: those before `cutout_first`
+    /// (opaque quads) with `pipelines[0]`, the rest with the alpha-tested
+    /// `pipelines[1]`. The opaque quads fill the depth buffer first, so the
+    /// cutout ones behind them are rejected before shading.
+    fn draw_phase1(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        pipelines: [&wgpu::RenderPipeline; 2],
+        cutout_first: u32,
+        end: u32,
+    ) {
+        let split = cutout_first.min(end);
+        pass.set_pipeline(pipelines[0]);
+        self.draw_sections(pass, &self.indirect, 0, 0, split);
+        pass.set_pipeline(pipelines[1]);
+        self.draw_sections(pass, &self.indirect, 0, split, end - split);
     }
     fn release_section(&mut self, key: SectionKey) {
         if let Some(s) = self.sections.remove(key) {
@@ -3859,30 +3905,51 @@ impl Renderer {
             .and_then(|cull| cull.begin(&self.device).then_some(cull));
         self.phase2_draws.clear();
         self.phase2_pages.clear();
+        self.cutout_draws.clear();
+        self.cutout_pages.clear();
         self.solid_runs.clear();
         self.phase2_runs.clear();
+        self.cutout_runs.clear();
+        // Phase 1 draws its sections' opaque quads, then their cutout ones
+        // (`cutout_first`); phase 2 draws each section's quads together.
         for (i, v) in visible.iter().enumerate() {
             let s = self.sections.get(v.slot);
             let first_phase = cull.as_ref().is_none_or(|c| c.first(v.slot));
-            let (draws, pages) = if first_phase {
-                (&mut self.draws, &mut self.draw_pages)
+            let (draws, pages, runs) = if first_phase {
+                (&mut self.draws, &mut self.draw_pages, &mut self.solid_runs)
             } else {
-                (&mut self.phase2_draws, &mut self.phase2_pages)
+                (
+                    &mut self.phase2_draws,
+                    &mut self.phase2_pages,
+                    &mut self.phase2_runs,
+                )
             };
             let start = draws.len();
             let instances = u32::from(first_phase);
             let mut indices = 0;
-            facing_runs(&s.sides, eye, v.origin, |first, quads| {
+            let mut push = |draws: &mut Vec<[u32; 5]>, pages: &mut Vec<_>, first, quads| {
                 indices += quads * 6;
                 let base = s.start as u32 + first * 4;
                 draws.push([quads * 6, instances, 0, base, i as u32]);
                 pages.push((s.page, None));
-            });
-            let runs = if first_phase {
-                &mut self.solid_runs
-            } else {
-                &mut self.phase2_runs
             };
+            if first_phase {
+                facing_runs(&s.sides, eye, v.origin, |first, quads| {
+                    push(draws, pages, first, quads)
+                });
+                let cutout_start = self.cutout_draws.len();
+                let (cutout, cutout_pages) = (&mut self.cutout_draws, &mut self.cutout_pages);
+                cutout_runs(s, eye, v.origin, |first, quads| {
+                    push(cutout, cutout_pages, first, quads)
+                });
+                let len = self.cutout_draws.len() - cutout_start;
+                self.cutout_runs
+                    .push(v.distance, s.page, cutout_start, len, [0; 3]);
+            } else {
+                solid_runs(s, eye, v.origin, |first, quads| {
+                    push(draws, pages, first, quads)
+                });
+            }
             runs.push(
                 v.distance,
                 s.page,
@@ -3898,6 +3965,11 @@ impl Renderer {
         }
         self.solid_runs
             .regroup(&mut self.draws, &mut self.draw_pages, 0);
+        self.cutout_runs
+            .regroup(&mut self.cutout_draws, &mut self.cutout_pages, 0);
+        let cutout_first = self.draws.len() as u32;
+        self.draws.extend_from_slice(&self.cutout_draws);
+        self.draw_pages.extend_from_slice(&self.cutout_pages);
         // Phase 2's draws are tested where grouping left them.
         let runs = self
             .phase2_runs
@@ -3915,7 +3987,7 @@ impl Renderer {
             let s = &self.lods[&v.key].mesh;
             let start = self.draws.len();
             let instance = (visible.len() + i) as u32;
-            facing_runs(&s.sides, eye, v.origin, |first, quads| {
+            solid_runs(s, eye, v.origin, |first, quads| {
                 let base = s.start as u32 + first * 4;
                 self.draws.push([quads * 6, 1, 0, base, instance]);
                 self.draw_pages.push((s.page, None));
@@ -4064,7 +4136,7 @@ impl Renderer {
                     }
                 }
                 let before = self.draws.len();
-                facing_runs(&s.sides, Some(toward), v.origin, |first, quads| {
+                solid_runs(s, Some(toward), v.origin, |first, quads| {
                     let start = s.start as u32 + first * 4;
                     self.draws.push([quads * 6, 1, 0, start, instance]);
                     self.draw_pages.push((s.page, None));
@@ -4108,6 +4180,7 @@ impl Renderer {
             (0..self.section_draws)
                 .filter(|&i| {
                     i == 0
+                        || i == cutout_first as usize
                         || i == phase1_draws as usize
                         || i == solid_draws as usize
                         || self.draw_pages[i] != self.draw_pages[i - 1]
@@ -4580,6 +4653,8 @@ impl Renderer {
             .filter(|_| !frame.title)
             .and_then(|n| Some((n.material.as_ref()?, &n.frame.group)));
         let solid_pipeline = material.map_or(&self.solid, |(m, _)| &m.solid);
+        // A pack's material draws opaque quads with its alpha-tested pipeline.
+        let opaque_pipeline = material.map_or(&self.opaque, |(m, _)| &m.solid);
         let translucent_pipeline = material.map_or(&self.translucent, |(m, _)| &m.translucent);
         let pack_flat = material.and_then(|(m, _)| m.flat.as_ref());
         let pack_frame = |pass: &mut wgpu::RenderPass<'_>| {
@@ -4697,16 +4772,16 @@ impl Renderer {
                     pass.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
                 }
                 None => {
-                    pass.set_pipeline(solid_pipeline);
                     pass.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
                     pass.set_vertex_buffer(1, self.instances.slice(..));
+                    let phase1 = [opaque_pipeline, solid_pipeline];
                     match cull {
                         Some(cull) => {
                             // Phase 1 and the boxes against its depth (in
                             // its pass, or one of their own on Metal), then
                             // what they found in sight, in a pass that loads
                             // both targets (it reads the test's results).
-                            self.draw_sections(&mut pass, &self.indirect, 0, 0, phase1_draws);
+                            self.draw_phase1(&mut pass, phase1, cutout_first, phase1_draws);
                             cull.test(&mut pass);
                             drop(pass);
                             cull.test_pass(&mut encoder);
@@ -4732,7 +4807,7 @@ impl Renderer {
                                 solid_draws - phase1_draws,
                             );
                         }
-                        None => self.draw_sections(&mut pass, &self.indirect, 0, 0, solid_draws),
+                        None => self.draw_phase1(&mut pass, phase1, cutout_first, solid_draws),
                     }
                 }
             }
@@ -5416,6 +5491,21 @@ fn facing_runs(sides: &Sides, eye: Option<Vec3>, origin: [f32; 3], mut draw: imp
         None if sides.quads() > 0 => draw(0, sides.quads()),
         None => {}
     }
+}
+/// `facing_runs` over a section's solid quads of both classes: the opaque
+/// ones, then the cutout ones (for lists drawn with the alpha test, which
+/// suits both).
+fn solid_runs(s: &SectionGpu, eye: Option<Vec3>, origin: [f32; 3], mut draw: impl FnMut(u32, u32)) {
+    facing_runs(&s.sides, eye, origin, &mut draw);
+    cutout_runs(s, eye, origin, draw);
+}
+/// `facing_runs` over a section's cutout solid quads, which follow its
+/// opaque ones.
+fn cutout_runs(s: &SectionGpu, eye: Option<Vec3>, origin: [f32; 3], mut draw: impl FnMut(u32, u32)) {
+    let opaque = s.sides.quads();
+    facing_runs(&s.cutout, eye, origin, |first, quads| {
+        draw(opaque + first, quads)
+    });
 }
 fn frustum(m: Mat4) -> [Vec4; 6] {
     let r = |i| m.row(i);

@@ -130,10 +130,20 @@ mod vertex_tests {
 }
 pub struct SectionMesh {
     pub solid: Vec<TerrainVertex>,
-    /// The buckets `solid` is sorted in by the side its quads face: empty
-    /// until `sort_solid`, which the meshing workers call; `solid` is in
-    /// model order before.
+    /// The buckets `solid`'s opaque quads are sorted in by the side they
+    /// face: empty until `sort_solid`, which the meshing workers call;
+    /// `solid` is in model order before, and after it holds the opaque quads
+    /// (`OPAQUE_LAYER`), then the cutout ones (`cutout_sides`).
     pub sides: Sides,
+    /// The buckets of the cutout quads after the opaque ones, counted from
+    /// the first of them. The renderer draws opaque quads first, with a
+    /// fragment shader that never discards, so the GPU keeps rejecting hidden
+    /// pixels before shading them; only cutout quads take the alpha test.
+    pub cutout_sides: Sides,
+    /// Quads of `solid` (in model order) with `OPAQUE_LAYER` that a cutout
+    /// quad of their own block precedes: they draw with the cutout quads, so
+    /// that coplanar quads of a model keep their order.
+    pub late_opaque: Vec<u32>,
     pub translucent: Vec<TerrainVertex>,
     /// VisGraph: bit `a * 6 + b` is set when faces `a` and `b` (Direction
     /// order) are connected through non-opaque blocks.
@@ -148,6 +158,8 @@ impl Default for SectionMesh {
         Self {
             solid: Vec::new(),
             sides: Sides::default(),
+            cutout_sides: Sides::default(),
+            late_opaque: Vec::new(),
             translucent: Vec::new(),
             visibility: ALL_VISIBLE,
             block_entities: Vec::new(),
@@ -155,10 +167,86 @@ impl Default for SectionMesh {
     }
 }
 impl SectionMesh {
-    /// Sorts the solid quads by the side they face, for the renderer to
-    /// leave out those facing away from the eye (`sides`).
+    /// Puts the opaque solid quads before the cutout ones and sorts each by
+    /// the side they face, for the renderer to leave out those facing away
+    /// from the eye (`sides`, `cutout_sides`). Each class keeps model order.
     pub fn sort_solid(&mut self) {
+        let mut cutout = self.split_cutout();
         self.sides = sides::sort(&mut self.solid);
+        self.cutout_sides = sides::sort(&mut cutout);
+        self.solid.append(&mut cutout);
+    }
+    /// Takes the cutout quads out of `solid`: those without `OPAQUE_LAYER`,
+    /// and the `late_opaque` ones.
+    fn split_cutout(&mut self) -> Vec<TerrainVertex> {
+        let late = std::mem::take(&mut self.late_opaque);
+        let (quads, _) = self.solid.as_chunks::<4>();
+        let mut late = late.iter().peekable();
+        let (mut opaque, mut cutout) = (Vec::new(), Vec::new());
+        for (i, quad) in quads.iter().enumerate() {
+            let demoted = late.next_if_eq(&&(i as u32)).is_some();
+            if quad[0].layer & OPAQUE_LAYER != 0 && !demoted {
+                opaque.extend_from_slice(quad);
+            } else {
+                cutout.extend_from_slice(quad);
+            }
+        }
+        self.solid = opaque;
+        cutout
+    }
+    /// The quads of a block from solid quad `first` on: an opaque one after
+    /// a cutout one is drawn with the cutout quads (`late_opaque`).
+    fn keep_block_order(&mut self, first: usize) {
+        let (quads, _) = self.solid.as_chunks::<4>();
+        let mut cutout = false;
+        for (i, quad) in quads.iter().enumerate().skip(first) {
+            if quad[0].layer & OPAQUE_LAYER == 0 {
+                cutout = true;
+            } else if cutout {
+                self.late_opaque.push(i as u32);
+            }
+        }
+    }
+}
+#[cfg(test)]
+mod split_tests {
+    use super::*;
+
+    /// A +Y quad at height `y` with sprite `layer`.
+    fn quad(y: f32, layer: u16) -> [TerrainVertex; 4] {
+        [[0.0, y, 0.0], [0.0, y, 1.0], [1.0, y, 1.0], [1.0, y, 0.0]]
+            .map(|p| TerrainVertex::new(p, [0.0; 2], layer, 0, 0))
+    }
+
+    #[test]
+    fn opaque_quads_go_first_and_keep_their_block_order() {
+        let mut mesh = SectionMesh::default();
+        // A block of an opaque base, a cutout overlay and an opaque quad
+        // after it; then a block with one opaque quad.
+        for (y, layer) in [(1.0, 1 | OPAQUE_LAYER), (1.0, 2), (1.0, 3 | OPAQUE_LAYER)] {
+            mesh.solid.extend(quad(y, layer));
+        }
+        mesh.keep_block_order(0);
+        mesh.solid.extend(quad(2.0, 4 | OPAQUE_LAYER));
+        mesh.keep_block_order(3);
+        assert_eq!(mesh.late_opaque, [2]);
+        mesh.sort_solid();
+        let layers: Vec<u16> = mesh.solid.iter().step_by(4).map(|v| v.layer & 0x7fff).collect();
+        assert_eq!(layers, [1, 4, 2, 3]);
+        assert_eq!((mesh.sides.quads(), mesh.cutout_sides.quads()), (2, 2));
+        assert!(mesh.late_opaque.is_empty());
+        // The opaque range is all OPAQUE_LAYER; the cutout range starts with a cutout quad.
+        assert!(mesh.solid[..8].iter().all(|v| v.layer & OPAQUE_LAYER != 0));
+        assert_eq!(mesh.solid[8].layer & OPAQUE_LAYER, 0);
+    }
+
+    #[test]
+    fn a_mesh_without_cutout_quads_is_all_opaque() {
+        let mut mesh = SectionMesh::default();
+        mesh.solid.extend(quad(1.0, 7 | OPAQUE_LAYER));
+        mesh.keep_block_order(0);
+        mesh.sort_solid();
+        assert_eq!((mesh.sides.quads(), mesh.cutout_sides.quads()), (1, 0));
     }
 }
 pub const ALL_VISIBLE: u64 = (1 << 36) - 1;
@@ -809,6 +897,7 @@ impl Mesher<'_> {
                                 )
                                 .unwrap_or(true);
                     }
+                    let first_quad = out.solid.len() / 4;
                     for model in &models {
                         for face in &model.faces {
                             if face.quad.cull.is_some_and(|d| !visible[d as usize]) {
@@ -826,6 +915,7 @@ impl Mesher<'_> {
                             );
                         }
                     }
+                    out.keep_block_order(first_quad);
                 }
             }
         }

@@ -139,14 +139,22 @@ fn apply_fog(color: vec4<f32>, spherical: f32, cylindrical: f32) -> vec4<f32> {
                 linear_fog(cylindrical, globals.fog.z, globals.fog.w));
     return vec4(mix(color.rgb, globals.fog_color.rgb, f * globals.fog_color.a), color.a);
 }
-@fragment fn fs_solid(in: TerrainOut) -> @location(0) vec4<f32> {
-    // Bit 15 of the layer marks opaque leaves (forceOpaque): no alpha cutout.
-    let color = sprite(in.uv, in.layer & 0x7fffu) * in.color;
-    if color.a < 0.5 && (in.layer & 0x8000u) == 0u { discard; }
+fn solid_output(color: vec4<f32>, in: TerrainOut) -> vec4<f32> {
     // Alpha 0 tells HDR output (hdr.wgsl) a light-emitting block's bright pixels
     // may shine. Nothing else reads the frame's alpha.
     let emissive = select(1.0, 0.0, in.emission > 0u);
     return apply_fog(vec4(color.rgb, emissive), in.spherical, in.cylindrical);
+}
+@fragment fn fs_solid(in: TerrainOut) -> @location(0) vec4<f32> {
+    // Bit 15 of the layer marks opaque leaves (forceOpaque): no alpha cutout.
+    let color = sprite(in.uv, in.layer & 0x7fffu) * in.color;
+    if color.a < 0.5 && (in.layer & 0x8000u) == 0u { discard; }
+    return solid_output(color, in);
+}
+// fs_solid for the quads with bit 15 only (mesher.rs's SectionMesh::sort_solid puts them
+// first): the same colour, and no discard, which would turn early depth testing off.
+@fragment fn fs_opaque(in: TerrainOut) -> @location(0) vec4<f32> {
+    return solid_output(sprite(in.uv, in.layer & 0x7fffu) * in.color, in);
 }
 @fragment fn fs_translucent(in: TerrainOut) -> @location(0) vec4<f32> {
     let color = sprite(in.uv, in.layer & 0x7fffu) * in.color;
