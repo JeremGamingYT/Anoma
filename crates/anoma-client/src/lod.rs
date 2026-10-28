@@ -315,6 +315,72 @@ impl TileKey {
         }
         forward > 0. && left > 0. && right > 0.
     }
+    /// Whether the tiles overlap or share part of an edge; corners alone do
+    /// not count.
+    fn touches(self, other: Self) -> bool {
+        let ([x, _, z], size) = (self.origin(), self.size());
+        let ([ox, _, oz], os) = (other.origin(), other.size());
+        (x < ox + os && ox < x + size && z < oz + os && oz < z + size)
+            || (((x + size == ox) || (ox + os == x)) && z < oz + os && oz < z + size)
+            || (((z + size == oz) || (oz + os == z)) && x < ox + os && ox < x + size)
+    }
+    /// The tiles of `level`, no finer than this one, that may touch it: at
+    /// most three a side.
+    fn around(self, level: u8) -> impl Iterator<Item = Self> {
+        let size = 16 << level;
+        let [x, _, z] = self.origin();
+        let end = self.size();
+        let xs = x.div_euclid(size) - 1..=(x + end).div_euclid(size);
+        (z.div_euclid(size) - 1..=(z + end).div_euclid(size))
+            .flat_map(move |z| xs.clone().map(move |x| Self { x, z, level }))
+    }
+}
+/// The levels `tiles` holds, as flags indexed by level.
+fn levels<'a>(tiles: impl IntoIterator<Item = &'a TileKey>) -> Vec<bool> {
+    let mut levels = vec![false; usize::from(MAX_LEVEL) + 1];
+    for key in tiles {
+        let level = usize::from(key.level);
+        if level >= levels.len() {
+            levels.resize(level + 1, false);
+        }
+        levels[level] = true;
+    }
+    levels
+}
+/// The tiles of `tiles` that touch one of `changed` (`TileKey::touches`).
+/// Each pair is found from its finer tile, among the few coarser ones
+/// around it: a handful of lookups a level, instead of testing every tile
+/// against every change (thousands by thousands at the far distances).
+fn touching(tiles: &FxHashSet<TileKey>, changed: &FxHashSet<TileKey>) -> FxHashSet<TileKey> {
+    let mut found = FxHashSet::default();
+    if changed.is_empty() {
+        return found;
+    }
+    let (tile_levels, changed_levels) = (levels(tiles), levels(changed));
+    for &other in changed {
+        for level in usize::from(other.level)..tile_levels.len() {
+            if tile_levels[level] {
+                found.extend(
+                    other
+                        .around(level as u8)
+                        .filter(|key| tiles.contains(key) && key.touches(other)),
+                );
+            }
+        }
+    }
+    for &tile in tiles {
+        if !found.contains(&tile)
+            && (usize::from(tile.level) + 1..changed_levels.len()).any(|level| {
+                changed_levels[level]
+                    && tile
+                        .around(level as u8)
+                        .any(|key| changed.contains(&key) && tile.touches(key))
+            })
+        {
+            found.insert(tile);
+        }
+    }
+    found
 }
 #[derive(Default)]
 struct Plan {
@@ -1180,20 +1246,8 @@ impl Lod {
             // must not become hundreds of redundant fallback clipping masks.
             selected.retain(|key| key.level != 0 || !self.covered.contains(&(key.x, key.z)));
             let next: FxHashSet<_> = selected.iter().copied().collect();
-            let changed: Vec<_> = self.active.symmetric_difference(&next).copied().collect();
-            for &tile in &next {
-                let [x, _, z] = tile.origin();
-                let size = tile.size();
-                if changed.iter().any(|other| {
-                    let [ox, _, oz] = other.origin();
-                    let os = other.size();
-                    (x < ox + os && ox < x + size && z < oz + os && oz < z + size)
-                        || (((x + size == ox) || (ox + os == x)) && z < oz + os && oz < z + size)
-                        || (((z + size == oz) || (oz + os == z)) && x < ox + os && ox < x + size)
-                }) {
-                    self.dirty.insert(tile);
-                }
-            }
+            let changed: FxHashSet<_> = self.active.symmetric_difference(&next).copied().collect();
+            self.dirty.extend(touching(&next, &changed));
             self.dirty.extend(next.difference(&self.active).copied());
             self.dirty.retain(|key| next.contains(key));
             if !self.dirty.is_empty() || next != self.active {
@@ -2056,5 +2110,134 @@ mod tests {
             "one unfinished fine tile must not starve neighbouring requests"
         );
         Ok(())
+    }
+    /// `select`'s former test: every tile against every change.
+    fn touching_by_pairs(
+        tiles: &FxHashSet<TileKey>,
+        changed: &FxHashSet<TileKey>,
+    ) -> FxHashSet<TileKey> {
+        let mut found = FxHashSet::default();
+        for &tile in tiles {
+            let [x, _, z] = tile.origin();
+            let size = tile.size();
+            if changed.iter().any(|other| {
+                let [ox, _, oz] = other.origin();
+                let os = other.size();
+                (x < ox + os && ox < x + size && z < oz + os && oz < z + size)
+                    || (((x + size == ox) || (ox + os == x)) && z < oz + os && oz < z + size)
+                    || (((z + size == oz) || (oz + os == z)) && x < ox + os && ox < x + size)
+            }) {
+                found.insert(tile);
+            }
+        }
+        found
+    }
+    /// A xorshift generator: varied layouts that replay.
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self, bound: u64) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0 % bound
+        }
+    }
+    /// The tiles `select` would draw with each node ready one time in `odds`.
+    fn selection(plan: &Plan, rng: &mut Rng, odds: u64) -> FxHashSet<TileKey> {
+        let ready: FxHashMap<TileKey, ()> = plan
+            .nodes
+            .iter()
+            .filter(|_| rng.next(odds) == 0)
+            .map(|&key| (key, ()))
+            .collect();
+        let mut selected = Vec::new();
+        for &root in &plan.roots {
+            plan.select(root, &ready, &mut selected);
+        }
+        selected.into_iter().collect()
+    }
+    #[test]
+    fn touching_tiles_match_the_pairwise_test() {
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        let mut touched = 0;
+        // Plans' selections, as readiness and the camera change.
+        for (camera, moved, distance) in [
+            ([0, 0], [16, 0], 64),
+            ([-1, -17], [-40, 30], 256),
+            ([1023, -4097], [1023, -4000], 512),
+        ] {
+            let plan = Plan::new(camera, 4, distance);
+            let later = Plan::with_previous(moved, 4, distance, &plan, 0, false);
+            for odds in [1, 2, 3] {
+                let active = selection(&plan, &mut rng, odds);
+                for next in [
+                    selection(&plan, &mut rng, 2),
+                    selection(&later, &mut rng, odds),
+                ] {
+                    let changed = active.symmetric_difference(&next).copied().collect();
+                    let expected = touching_by_pairs(&next, &changed);
+                    touched += expected.len();
+                    assert_eq!(touching(&next, &changed), expected);
+                }
+            }
+        }
+        assert!(touched > 100, "{touched} touched tiles");
+        // Loose tiles of mixed levels: overlapping, adjacent, corner-only,
+        // negative, and changes that are not drawn tiles at all.
+        for _ in 0..200 {
+            let tile = |rng: &mut Rng| {
+                let level = rng.next(7) as u8;
+                let span = (64 >> level).max(2) as u64;
+                TileKey {
+                    x: rng.next(2 * span) as i32 - span as i32,
+                    z: rng.next(2 * span) as i32 - span as i32,
+                    level,
+                }
+            };
+            let tiles: FxHashSet<_> = (0..rng.next(300)).map(|_| tile(&mut rng)).collect();
+            let changed: FxHashSet<_> = (0..rng.next(40)).map(|_| tile(&mut rng)).collect();
+            assert_eq!(
+                touching(&tiles, &changed),
+                touching_by_pairs(&tiles, &changed)
+            );
+        }
+        let at = |x, z, level| TileKey { x, z, level };
+        let tiles: FxHashSet<_> = [at(0, 0, 0), at(1, 1, 0), at(2, 0, 0), at(0, 0, 2)]
+            .into_iter()
+            .collect();
+        // A corner touches nothing; an overlap does.
+        let changed = [at(1, 1, 0)].into_iter().collect();
+        assert_eq!(
+            touching(&tiles, &changed),
+            [at(1, 1, 0), at(0, 0, 2)].into_iter().collect()
+        );
+        // So do edges, whole or in part.
+        let changed = [at(1, 0, 0)].into_iter().collect();
+        assert_eq!(touching(&tiles, &changed), tiles);
+    }
+    /// `cargo test --profile fast -p horizon-client --lib lod::tests::touching_timing -- --ignored --nocapture`
+    #[test]
+    #[ignore = "timing, not a check"]
+    fn touching_timing() {
+        let mut rng = Rng(7);
+        let plan = Plan::new([0, 0], 12, 1024);
+        let later = Plan::with_previous([160, 0], 12, 1024, &plan, 0, false);
+        let active = selection(&plan, &mut rng, 1);
+        let next = selection(&later, &mut rng, 1);
+        let changed: FxHashSet<_> = active.symmetric_difference(&next).copied().collect();
+        let time = |f: &dyn Fn() -> FxHashSet<TileKey>| {
+            let start = std::time::Instant::now();
+            let found = f();
+            (start.elapsed(), found)
+        };
+        let (pairs, expected) = time(&|| touching_by_pairs(&next, &changed));
+        let (keys, found) = time(&|| touching(&next, &changed));
+        assert_eq!(found, expected);
+        println!(
+            "{} tiles, {} changed, {} touched: pairwise {pairs:?}, by key {keys:?}",
+            next.len(),
+            changed.len(),
+            found.len()
+        );
     }
 }
