@@ -90,6 +90,8 @@ pub mod witch;
 pub mod wither;
 mod world;
 pub use world::visual_clip;
+#[cfg(test)]
+mod dying_tests;
 pub mod zombie_villager;
 
 use crate::{blocks::BlockFacts, mesher::Vertex, world::World};
@@ -1970,6 +1972,14 @@ impl Mob {
     }
     pub fn alive(&self) -> bool {
         self.health > 0.0
+    }
+    /// `LivingEntity.heal`: a living mob gains `amount`, up to its max
+    /// health. A dead or dying one (`isDeadOrDying`) gains nothing: healing
+    /// never brings a body in its death animation back to life.
+    pub fn heal(&mut self, amount: f32) {
+        if self.alive() {
+            self.health = (self.health + amount).min(self.attrs.max_health);
+        }
     }
     pub fn hostile(&self) -> bool {
         self.kind.category == "monster"

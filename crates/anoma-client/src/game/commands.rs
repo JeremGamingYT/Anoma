@@ -678,7 +678,10 @@ impl Game<'_> {
         candidates.extend(
             self.mobs
                 .iter()
-                .filter(|m| m.death_time == 0)
+                // EntitySelector finds `Entity.isAlive` entities only: not
+                // the removed, not the dead or dying (health 0 before its
+                // first death tick included).
+                .filter(|m| m.alive() && !m.removed)
                 .map(|m| Target::Mob(m.id)),
         );
         candidates.extend(self.dropped.iter().map(|i| Target::Item(i.id)));

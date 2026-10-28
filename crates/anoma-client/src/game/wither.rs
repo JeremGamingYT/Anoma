@@ -165,7 +165,10 @@ impl Game<'_> {
                     && let Some(o) = owner
                     && let Some(w) = self.mobs.iter_mut().find(|m| m.id == o)
                 {
-                    w.health = (w.health + 5.0).min(w.attrs.max_health);
+                    // `livingOwner.heal(5.0F)`: a wither killed while its
+                    // skull flew stays dead (setting the health raised the
+                    // body back to life, in its death pose, still shooting).
+                    w.heal(5.0);
                 }
             }
             None => {}

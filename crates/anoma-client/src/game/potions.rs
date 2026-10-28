@@ -962,7 +962,7 @@ impl Game<'_> {
                             if (*id == "instant_damage") != inverted {
                                 m.hurt(amount(6), Some(at), &mut self.world.random);
                             } else {
-                                m.health = (m.health + amount(4)).min(m.kind.max_health);
+                                m.heal(amount(4));
                             }
                         }
                         _ => {
@@ -1234,8 +1234,7 @@ impl Game<'_> {
                         &mut self.world.random,
                     );
                 } else {
-                    m.health = (m.health + (intensity * f64::from(4 << amp) + 0.5) as i32 as f32)
-                        .min(m.kind.max_health);
+                    m.heal((intensity * f64::from(4 << amp) + 0.5) as i32 as f32);
                 }
             }
         }

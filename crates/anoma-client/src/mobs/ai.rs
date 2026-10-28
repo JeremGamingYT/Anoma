@@ -316,7 +316,7 @@ pub fn register(m: &mut Mob) {
 }
 /// Mob.tick additions that run before the entity tick (creeper fuse, puffing).
 fn pre_tick(m: &mut Mob, events: &mut Vec<MobEvent>) {
-    if m.species() == Species::Wither && m.alive() {
+    if m.species() == Species::Wither && !is_immobile(m) {
         super::wither::steer(m);
     }
     if m.species() == Species::Breeze {
@@ -886,6 +886,15 @@ fn play_ambient(m: &mut Mob, w: &MobWorld, events: &mut Vec<MobEvent>) {
         m.voice(sound, events);
     }
 }
+/// `LivingEntity.isImmobile`: the gate of `LivingEntity.aiStep` that keeps
+/// `serverAiStep` (goals, targets, brains, navigation, the move, look and
+/// jump controls, `customServerAiStep`) from running and zeroes the movement
+/// input. True for a dead or dying mob (`isDeadOrDying`: from the killing
+/// blow, `/kill` included, through the twenty ticks of `tickDeath`), and for
+/// a biting, stunned or roaring ravager (`Ravager.isImmobile`).
+pub fn is_immobile(m: &Mob) -> bool {
+    !m.alive() || (m.species() == Species::Ravager && super::ravager::immobile(m))
+}
 /// LivingEntity.aiStep (and Mob/AgeableMob/Animal additions).
 fn ai_step(m: &mut Mob, w: &MobWorld, level_random: &mut LegacyRandom, events: &mut Vec<MobEvent>) {
     if m.species() == Species::Parrot {
@@ -925,15 +934,12 @@ fn ai_step(m: &mut Mob, w: &MobWorld, level_random: &mut LegacyRandom, events: &
     );
     m.ai.xxa *= 0.98;
     m.ai.zza *= 0.98;
-    // LivingEntity.isImmobile: no goals or input (a biting, stunned or
-    // roaring ravager). A mannequin is an Avatar, not a Mob: LivingEntity's
-    // serverAiStep has no goals, so it only falls and is pushed.
-    let immobile = (m.species() == Species::Ravager && super::ravager::immobile(m))
-        || m.species() == Species::Mannequin;
     if m.species() == Species::Piglin && m.alive() {
         super::piglin::celebrate(m, w);
     }
-    if m.alive() && !immobile {
+    // A mannequin is an Avatar, not a Mob: LivingEntity's serverAiStep has
+    // no goals, so it only falls and is pushed.
+    if !is_immobile(m) && m.species() != Species::Mannequin {
         server_ai_step(m, w, level_random, events);
     } else {
         m.ai.jumping = false;
@@ -1249,7 +1255,9 @@ fn custom_server_ai_step(m: &mut Mob, cx: &mut Cx) {
         Species::Enderman => super::enderman::custom_server_ai_step(m, cx),
         Species::Blaze => super::nether::blaze_server_ai_step(m, cx),
         Species::ElderGuardian => super::guardian::elder_server_ai_step(m, cx),
-        Species::Wither if m.alive() => super::wither::custom_server_ai_step(m, cx.w, cx.events),
+        // Only reached past `is_immobile`: a dying wither neither charges,
+        // heals nor fires its side heads.
+        Species::Wither => super::wither::custom_server_ai_step(m, cx.w, cx.events),
         // SpellcasterIllager.customServerAiStep.
         Species::Evoker if m.extra.counter > 0 => m.extra.counter -= 1,
         Species::Bat => super::bat::server_ai_step(m, cx.w, cx.events),
@@ -1953,7 +1961,7 @@ fn tick_effects(m: &mut Mob) {
             "minecraft:regeneration"
                 if count % interval(50) == 0 && !m.kind.flags.undead && m.alive() =>
             {
-                m.health = (m.health + 1.0).min(m.attrs.max_health);
+                m.heal(1.0);
             }
             _ => {}
         }
