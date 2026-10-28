@@ -38,6 +38,9 @@ pub(super) struct Boat {
     status: Status,
     old_status: Status,
     water_level: f64,
+    /// `lastYd`: the vertical speed of the last move (`checkFallDamage`),
+    /// how far down `getWaterLevelAbove` looks for the surface on landing.
+    last_yd: f64,
     land_friction: f32,
     out_of_control: f32,
     pub hurt_time: i32,
@@ -70,6 +73,7 @@ impl Boat {
             status: Status::InAir,
             old_status: Status::InAir,
             water_level: 0.0,
+            last_yd: 0.0,
             land_friction: 0.0,
             out_of_control: 0.0,
             hurt_time: 0,
@@ -184,6 +188,38 @@ pub(super) fn boat_wood(item: &str) -> Option<&str> {
         .or_else(|| name.strip_suffix("_raft"))
         .filter(|w| !w.ends_with("_chest"))
 }
+/// A fluid's top: its block's y plus `FluidState.getHeight`, added in float
+/// as `isUnderwater`, `checkInWater` and `getWaterLevelAbove` do.
+fn surface(y: i32, height: f32) -> f64 {
+    f64::from(y as f32 + height)
+}
+/// `getWaterLevelAbove`: from the hull's top layer up through the last
+/// move's fall (`lastYd`), the first layer the water does not fill, at the
+/// height its water reaches; one above those layers when all are full.
+/// `height` is the water's `FluidState.getHeight` at a block, if any.
+fn water_level_above(
+    bounds: Aabb,
+    last_yd: f64,
+    mut height: impl FnMut(i32, i32, i32) -> Option<f32>,
+) -> f32 {
+    let (lo, hi) = (bounds.min_position(), bounds.max_position());
+    let (y0, y1) = (hi.y.floor() as i32, (hi.y - last_yd).ceil() as i32);
+    'rows: for y in y0..y1 {
+        let mut level = 0.0f32;
+        for x in lo.x.floor() as i32..hi.x.ceil() as i32 {
+            for z in lo.z.floor() as i32..hi.z.ceil() as i32 {
+                if let Some(h) = height(x, y, z) {
+                    level = level.max(h);
+                }
+                if level >= 1.0 {
+                    continue 'rows;
+                }
+            }
+        }
+        return y as f32 + level;
+    }
+    (y1 + 1) as f32
+}
 pub(super) struct BoatModels {
     pub models: HashMap<String, Part>,
     pub chest_models: HashMap<String, Part>,
@@ -247,28 +283,11 @@ impl Game<'_> {
         };
         Some((height, f.fluid_level == 8 && !f.fluid_falling))
     }
-    /// `getWaterLevelAbove`: the top of the water column the hull is in.
-    fn water_level_above(&self, b: &Boat) -> f64 {
-        let bb = b.bounds();
-        let (lo, hi) = (bb.min_position(), bb.max_position());
-        let (y0, y1) = (hi.y.floor() as i32, hi.y.ceil() as i32);
-        'rows: for y in y0..y1 {
-            let mut height = 0.0f32;
-            for x in lo.x.floor() as i32..hi.x.ceil() as i32 {
-                for z in lo.z.floor() as i32..hi.z.ceil() as i32 {
-                    if let Some((h, _)) = self.fluid_height(x, y, z) {
-                        height = height.max(h);
-                    }
-                    if height >= 1.0 {
-                        continue 'rows;
-                    }
-                }
-            }
-            if height < 1.0 {
-                return f64::from(y) + f64::from(height);
-            }
-        }
-        f64::from(y1 + 1)
+    /// `getWaterLevelAbove` for boat `b`.
+    fn water_level_above(&self, b: &Boat) -> f32 {
+        water_level_above(b.bounds(), b.last_yd, |x, y, z| {
+            self.fluid_height(x, y, z).map(|(h, _)| h)
+        })
     }
     fn boat_status(&self, b: &mut Boat) -> Status {
         let bb = b.bounds();
@@ -280,7 +299,7 @@ impl Game<'_> {
             for y in hi.y.floor() as i32..max_y.ceil() as i32 {
                 for z in lo.z.floor() as i32..hi.z.ceil() as i32 {
                     if let Some((h, source)) = self.fluid_height(x, y, z)
-                        && max_y < f64::from(y) + f64::from(h)
+                        && max_y < surface(y, h)
                     {
                         if !source {
                             b.water_level = hi.y;
@@ -302,7 +321,7 @@ impl Game<'_> {
             for y in lo.y.floor() as i32..(lo.y + 0.001).ceil() as i32 {
                 for z in lo.z.floor() as i32..hi.z.ceil() as i32 {
                     if let Some((h, _)) = self.fluid_height(x, y, z) {
-                        let level = f64::from(y) + f64::from(h);
+                        let level = surface(y, h);
                         b.water_level = b.water_level.max(level);
                         in_water |= lo.y < level;
                     }
@@ -358,6 +377,9 @@ impl Game<'_> {
         };
         b.hurt_time = (b.hurt_time - 1).max(0);
         b.damage = (b.damage - 1.0).max(0.0);
+        // VehicleEntity.tick -> Entity.baseTick: the currents push the boat
+        // before it floats, so a wave of falling water pushes it back out.
+        super::boat_fluids::push_boat(&mut b, &self.world, &self.motion.fluids);
         if !controlled {
             b.paddling = [false; 2];
             b.input = [false; 4];
@@ -374,8 +396,8 @@ impl Game<'_> {
         };
         if b.old_status == Status::InAir && b.status != Status::InAir && b.status != Status::OnLand
         {
-            b.water_level = b.position.y;
-            let target = self.water_level_above(&b) - HEIGHT + 0.101;
+            b.water_level = b.position.y + HEIGHT;
+            let target = f64::from(self.water_level_above(&b) - HEIGHT as f32) + 0.101;
             let moved = Aabb::new(
                 Vec3::new(
                     b.bounds().min_position().x,
@@ -391,6 +413,7 @@ impl Game<'_> {
             if scene.unobstructed(moved).unwrap_or(false) {
                 b.position.y = target;
                 b.velocity.y = 0.0;
+                b.last_yd = 0.0;
             }
             b.status = Status::InWater;
         } else {
@@ -404,7 +427,7 @@ impl Game<'_> {
                     inv_friction = 0.9;
                 }
                 Status::UnderWater => {
-                    buoyancy = 0.01;
+                    buoyancy = f64::from(0.01f32);
                     inv_friction = 0.45;
                 }
                 Status::InAir => inv_friction = 0.9,
@@ -460,6 +483,8 @@ impl Game<'_> {
                 b.position.z + moved.z,
             );
             b.on_ground = b.velocity.y < 0.0 && moved.y > b.velocity.y;
+            // checkFallDamage, before a blocked fall stops the boat.
+            b.last_yd = b.velocity.y;
             if (moved.x - b.velocity.x).abs() > 1.0e-7 {
                 b.velocity.x = 0.0;
             }
@@ -959,5 +984,34 @@ impl Game<'_> {
             }
             self.cull_entity_vertices(out, entity_start);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A boat 0.5625 tall at `y`, inside one block in x and z.
+    fn hull(y: f64) -> Aabb {
+        Aabb::new(Vec3::new(0.2, y, 0.2), Vec3::new(0.8, y + HEIGHT, 0.8))
+    }
+
+    /// `getWaterLevelAbove` looks up through the last move's fall: a boat
+    /// that dropped into a pool under a column of water (full layers at 4
+    /// and 5, 8/9 at 6) finds the column's top, not the layer it is in.
+    #[test]
+    fn water_level_above_scans_up_through_the_fall() {
+        let column = |_: i32, y: i32, _: i32| match y {
+            4 | 5 => Some(1.0),
+            6 => Some(8.0 / 9.0),
+            _ => None,
+        };
+        assert_eq!(water_level_above(hull(3.9), -2.5, column), 6.0 + 8.0 / 9.0);
+        // Without the fall only the top layer is looked at: full, so one
+        // above it.
+        assert_eq!(water_level_above(hull(3.9), 0.0, column), 6.0);
+        // A layer the water does not fill is the level.
+        let pool = |_: i32, y: i32, _: i32| (y == 4).then_some(8.0 / 9.0);
+        assert_eq!(water_level_above(hull(4.0), -0.3, pool), 4.0 + 8.0 / 9.0);
     }
 }
