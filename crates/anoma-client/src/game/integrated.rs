@@ -382,6 +382,7 @@ impl Game<'_> {
             return result.and(stopped);
         }
         let mut next = Instant::now();
+        let mut was_paused = false;
         while !flags.stop.load(Ordering::Relaxed) {
             self.run_tasks();
             if self.agent.hold_server {
@@ -391,6 +392,15 @@ impl Game<'_> {
                 continue;
             }
             let paused = flags.paused.load(Ordering::Relaxed);
+            // IntegratedServer.tickServer: the world is saved as the game
+            // pauses.
+            if paused && !was_paused {
+                log::info!("Saving and pausing game...");
+                if let Err(e) = self.save_game_with(false) {
+                    log::warn!("the world was not saved on pause: {e}");
+                }
+            }
+            was_paused = paused;
             if paused {
                 // Only the connections run.
                 self.tick_server_timed(true)?;

@@ -352,10 +352,10 @@ impl Game<'_> {
     /// throttled when minimised, idle, or in a menu without a world.
     pub(super) fn framerate_limit(&self) -> i32 {
         let context = FrameContext {
-            inactivity: if self.settings.inactivity_fps_limit == "minimized" {
-                InactivityFpsLimit::Minimized
-            } else {
-                InactivityFpsLimit::Afk
+            inactivity: match self.settings.inactivity_fps_limit.as_str() {
+                "minimized" => InactivityFpsLimit::Minimized,
+                "afk_or_unfocused" => InactivityFpsLimit::AfkOrUnfocused,
+                _ => InactivityFpsLimit::Afk,
             },
             iconified: self
                 .window

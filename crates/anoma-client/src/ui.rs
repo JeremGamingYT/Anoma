@@ -363,12 +363,19 @@ pub fn slider(
         // A controller's D-pad can focus it (Anoma's controller support).
         crate::widgets::target_as([x, y, w, 20.0], kind);
     }
-    let track = if hover && active {
-        "gui/sprites/widget/slider_highlighted"
-    } else {
-        "gui/sprites/widget/slider"
-    };
-    nine_slice(batch, atlas, track, x, y, w, 20.0, u32::MAX);
+    // AbstractSliderButton.getSprite: the highlighted track is for keyboard
+    // focus only (packs such as Ashen leave it empty); the mouse lights the
+    // handle alone.
+    nine_slice(
+        batch,
+        atlas,
+        "gui/sprites/widget/slider",
+        x,
+        y,
+        w,
+        20.0,
+        u32::MAX,
+    );
     let handle = if hover && active {
         "gui/sprites/widget/slider_handle_highlighted"
     } else {

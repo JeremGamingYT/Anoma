@@ -208,7 +208,13 @@ fn is_potion_item(item: &str) -> bool {
 /// The name line of `stack`, as the item's translation or, for potions and
 /// smithing templates, its name component gives it.
 pub fn name_line(stack: &ItemStack, translate: &dyn Fn(&str) -> Option<String>) -> String {
-    let path = stack.item.trim_start_matches("minecraft:");
+    // Util.makeDescriptionId: `item.<namespace>.<path>`, so items outside
+    // `minecraft:` (a mod's or a data pack's) find their names too.
+    let (namespace, path) = stack
+        .item
+        .split_once(':')
+        .unwrap_or(("minecraft", &stack.item));
+    let id = format!("{namespace}.{}", path.replace('/', "."));
     if let Some(name) = stack.custom_name() {
         return name.to_owned();
     }
@@ -232,8 +238,8 @@ pub fn name_line(stack: &ItemStack, translate: &dyn Fn(&str) -> Option<String>) 
         None
     };
     key.and_then(|k| translate(&k))
-        .or_else(|| translate(&format!("item.minecraft.{path}")))
-        .or_else(|| translate(&format!("block.minecraft.{path}")))
+        .or_else(|| translate(&format!("item.{id}")))
+        .or_else(|| translate(&format!("block.{id}")))
         .unwrap_or_else(|| path.replace('_', " "))
 }
 
@@ -860,6 +866,10 @@ mod tests {
         let plain = ItemStack::new("minecraft:white_banner", 1);
         assert_eq!(name_line(&plain, &translate), "White Banner");
         assert_eq!(rarity(&plain, "common"), "common");
+        // A mod's item: its own namespace's key (#3396).
+        let modded = ItemStack::new("examplemod:ruby_sword", 1);
+        let names = |k: &str| (k == "item.examplemod.ruby_sword").then(|| "Ruby Sword".to_owned());
+        assert_eq!(name_line(&modded, &names), "Ruby Sword");
     }
 
     #[test]

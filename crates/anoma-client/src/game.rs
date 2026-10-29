@@ -1532,6 +1532,9 @@ struct Game<'a> {
     /// The shader pack's entity and block entity ids, while one draws entities.
     pack_ids: Option<shader_packs::PackIds>,
     started: Instant,
+    /// Seconds from `started` to this frame's start: the glint's clock,
+    /// read once a frame rather than once an item (#3183).
+    glint_clock: f32,
     /// `SpectatorGui`: the menu a spectator opens with the hotbar keys.
     spectator_gui: anoma_client::spectator_menu::SpectatorGui,
     previous: Instant,
@@ -8053,9 +8056,11 @@ impl Game<'_> {
                     p.z + (q.z - p.z) * a,
                 )
             };
+            // EntityRenderDispatcher: an invisible entity casts no shadow.
             let mut casters: Vec<(glam::DVec3, &str)> = self
                 .mobs
                 .iter()
+                .filter(|m| !m.invisible && !m.has_effect("minecraft:invisibility"))
                 .map(|m| (lerp(m.previous, m.position), m.kind.id.as_str()))
                 .collect();
             casters.extend(
@@ -9421,6 +9426,8 @@ impl Game<'_> {
         self.sleep_timer = 0;
         self.clear_entities();
         self.screen = Screen::Playing;
+        self.release_keys();
+        self.titles = Default::default();
         self.clear_lod();
         self.pending_uploads.clear();
         if let Some(r) = self.renderer.as_mut() {
@@ -9435,6 +9442,12 @@ impl Game<'_> {
         }
         self.capture(false);
         Ok(())
+    }
+    /// `KeyMapping.releaseAll`: no key or mouse button stays held.
+    fn release_keys(&mut self) {
+        self.keys.clear();
+        self.left = false;
+        self.right = false;
     }
     /// Let go of every entity of the level (saved first): the next world
     /// opened must not inherit them, nor save them as its own.
@@ -10416,7 +10429,7 @@ impl Game<'_> {
         let kind = anoma_client::projectiles::ProjectileKind::Arrow {
             base_damage: 2.0 + power_bonus,
             critical: power >= 1.0,
-            effect: None,
+            effect: crossbow::arrow_effect(&ammo),
         };
         let mut arrow = anoma_client::projectiles::Projectile::new(
             kind,
@@ -11867,7 +11880,8 @@ impl Game<'_> {
                 .sprites
                 .get("environment/end_sky")
                 .map(|r| [r.u0, r.v0, r.u1, r.v1]),
-            environment_fog: (self.dim == Dim::Nether).then_some((sky.fog_start, sky.fog_end)),
+            environment_fog: (self.dim == Dim::Nether && self.settings.anoma.fog)
+                .then_some((sky.fog_start, sky.fog_end)),
             cave_culling,
             water_fog,
             fog: Some({
@@ -11878,7 +11892,15 @@ impl Game<'_> {
                     && self.darkness_fog().is_none()
                     && !self.boss_overlay.should_create_world_fog()
                     && self.potions.effects.get("blindness").is_none()
-                    && fog.environmental_end >= (self.streaming.radius * 16) as f32
+                    && !matches!(
+                        anoma_client::fog::fog_type(
+                            &self.world,
+                            self.res.facts(),
+                            [camera.x, camera.y, camera.z],
+                            self.forward(),
+                        ),
+                        anoma_client::fog::FogType::Lava | anoma_client::fog::FogType::PowderSnow
+                    )
                 {
                     (fog.render_distance_start, fog.render_distance_end) = (1e9, 2e9);
                     (fog.environmental_start, fog.environmental_end) = (1e9, 2e9);
@@ -13342,6 +13364,7 @@ impl ApplicationHandler for Game<'_> {
                 WindowEvent::RedrawRequested => {
                     self.observe_fullscreen();
                     let now = Instant::now();
+                    self.glint_clock = now.duration_since(self.started).as_secs_f32();
                     let frame_cpu = self
                         .options
                         .spikes
@@ -13457,7 +13480,25 @@ impl ApplicationHandler for Game<'_> {
                         r.gpu_times.clear();
                     }
                     self.limit_frame();
+                    let was_paused = self.pause;
                     self.pause = self.pauses_game();
+                    // IntegratedServer.tickServer: the world is saved as
+                    // the game pauses (here when it runs in the frame; the
+                    // server thread saves its own).
+                    if self.pause
+                        && !was_paused
+                        && self.integrated.is_none()
+                        && self.remote.is_none()
+                        && self.pending_save.is_none()
+                    {
+                        log::info!("Saving and pausing game...");
+                        // Quietly: no "Saved the game" under the pause menu.
+                        let message = self.message.take();
+                        if let Err(e) = self.save_game_with(false) {
+                            log::warn!("the world was not saved on pause: {e}");
+                        }
+                        self.message = message;
+                    }
                     if let Some(server) = &self.integrated {
                         server.set_paused(self.pause);
                         server.set_distances(
@@ -13760,6 +13801,7 @@ impl<'a> Game<'a> {
             pack_ids: None,
             health_hud: hud_layout::HealthHud::default(),
             started: now,
+            glint_clock: 0.0,
             spectator_gui: Default::default(),
             previous: now,
             last_input: now,

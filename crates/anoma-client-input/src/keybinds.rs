@@ -378,13 +378,16 @@ impl KeyBinds {
     }
     /// The default keys of every mapping `key` is bound to (empty when it
     /// now does nothing), so a key bound to two mappings (forward and
-    /// sprint) drives both, as `KeyMapping.set` does.
+    /// sprint) drives both, as `KeyMapping.set` does. The F3 combinations
+    /// (`key.debug.*`, on 1, A, B...) read the physical key themselves:
+    /// they never keep a moved mapping's old key alive.
     pub fn translate_all(&self, key: KeyCode) -> Vec<Result<KeyCode, MouseButton>> {
         let Some(name) = key_name(key) else {
             return vec![Ok(key)];
         };
         let bound: Vec<_> = self
             .mappings_for(name)
+            .filter(|mapping| !mapping.starts_with("key.debug."))
             .filter_map(|mapping| {
                 let default = Self::default_of(mapping);
                 match key_code(default) {
@@ -399,7 +402,7 @@ impl KeyBinds {
         // An unbound key whose default meaning was moved elsewhere is inert.
         if MAPPINGS
             .iter()
-            .any(|(n, d, _)| *d == name && !self.is_default(n))
+            .any(|(n, d, c)| *d == name && *c != "debug" && !self.is_default(n))
         {
             return Vec::new();
         }
@@ -485,6 +488,21 @@ mod tests {
         assert_eq!(keys.container_mouse_key(MouseButton::Left, false), None);
         assert_eq!(keys.container_mouse_key(MouseButton::Right, false), None);
         assert_eq!(keys.container_mouse_key(MouseButton::Forward, false), None);
+    }
+
+    #[test]
+    fn a_moved_hotbar_key_no_longer_selects_its_slot() {
+        let mut k = KeyBinds::default();
+        k.set("key.hotbar.1", "key.keyboard.y");
+        assert_eq!(k.translate_all(KeyCode::KeyY), vec![Ok(KeyCode::Digit1)]);
+        assert_eq!(k.translate_all(KeyCode::Digit1), vec![]);
+        // Strafe left on E (#3158): A, also F3+A, no longer strafes.
+        k.set("key.left", "key.keyboard.e");
+        assert_eq!(k.translate_all(KeyCode::KeyA), vec![]);
+        // Moving an F3 combination leaves the key's own mapping alone.
+        let mut k = KeyBinds::default();
+        k.set("key.debug.reloadChunk", "key.keyboard.z");
+        assert_eq!(k.translate_all(KeyCode::KeyA), vec![Ok(KeyCode::KeyA)]);
     }
 
     #[test]

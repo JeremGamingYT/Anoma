@@ -149,6 +149,9 @@ impl Game<'_> {
                 }
             }
             Some(Click::ShowDialog(dialog)) => self.show_dialog_ref(&dialog),
+            // Screen.clickUrlAction: the Chat Links options, then the
+            // ConfirmLinkScreen over the dialog, or the browser at once.
+            Some(Click::OpenUrl(url)) => self.click_url(url),
             Some(Click::CopyToClipboard(value)) => {
                 use anoma_client::clipboard::Clipboard;
                 self.clipboard.set(&value);

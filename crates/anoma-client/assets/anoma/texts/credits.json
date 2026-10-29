@@ -1,0 +1,73 @@
+[
+  {
+    "section": "Anoma",
+    "disciplines": [
+      {
+        "discipline": "",
+        "titles": [
+          { "title": "Anoma", "names": ["JeremGaming"] },
+          { "title": "Engine (Horizon)", "names": ["Ludovic Marie"] },
+          {
+            "title": "Contributors",
+            "names": [
+              "Kacpherek", "rdbt", "Cosmic", "levzzz", "Hector Eccles",
+              "Alexander Krylov", "socksprox", "Eshayat Al-Wasiu", "FusselTV",
+              "iLostName", "asowneryt", "LookImEcho-Rick", "Senjin", "vlesmentie",
+              "Ganer", "masa-masa-0314", "sirrayi", "RVZO6", "itspotatotime",
+              "some-du6e", "Andrii", "feeldev", "Carlos Nunez", "ThatCakeIsAPie",
+              "Joansitoh", "lazy-importer", "DanielGodriNeto", "Simon Dräger",
+              "and everyone who reported an issue"
+            ]
+          },
+          { "title": "AI Pair Programming", "names": ["Claude (Anthropic)"] }
+        ]
+      }
+    ]
+  },
+  {
+    "section": "Resource Packs",
+    "disciplines": [
+      {
+        "discipline": "",
+        "titles": [
+          { "title": "Fresh Animations, FA+Player", "names": ["FreshLX"] },
+          { "title": "Fresh Food", "names": ["Cyber, Ben, Hellay & Pato"] },
+          { "title": "Recolourful Containers", "names": ["Vi_Tul"] },
+          { "title": "Cubic Sun & Moon", "names": ["JoeFly"] },
+          { "title": "Ashen 16x", "names": ["The Ashen team"] }
+        ]
+      }
+    ]
+  },
+  {
+    "section": "Built With",
+    "disciplines": [
+      {
+        "discipline": "",
+        "titles": [
+          { "title": "Language", "names": ["Rust"] },
+          { "title": "Graphics and windowing", "names": ["wgpu", "winit"] },
+          { "title": "And", "names": ["the open-source crates listed in THIRD_PARTY_NOTICES"] }
+        ]
+      }
+    ]
+  },
+  {
+    "section": "Minecraft",
+    "disciplines": [
+      {
+        "discipline": "",
+        "titles": [
+          {
+            "title": "Minecraft is a trademark of Mojang Studios",
+            "names": ["Anoma is not an official Minecraft product", "and is not affiliated with Mojang or Microsoft."]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "section": "Thank you for playing!",
+    "disciplines": []
+  }
+]

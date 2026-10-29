@@ -87,7 +87,7 @@ const MODEL_PARTS: [&str; 7] = [
 ];
 const GRAPHICS_BACKEND: &[&str] = &["default", "opengl", "vulkan"];
 const GRAPHICS_PRESET: &[&str] = &["fast", "fancy", "fabulous", "custom"];
-const INACTIVITY: &[&str] = &["minimized", "afk"];
+const INACTIVITY: &[&str] = &["minimized", "afk", "afk_or_unfocused"];
 const CLOUDS: &[&str] = &["false", "fast", "true"];
 const MAIN_HAND: &[&str] = &["left", "right"];
 const PRESENCE: &[&str] = &["none", "limited", "all"];

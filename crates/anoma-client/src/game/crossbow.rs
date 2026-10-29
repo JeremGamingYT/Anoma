@@ -16,9 +16,22 @@ use anoma_core::{geometry::Vec3, random::RandomSource};
 const CROSSBOW: &str = "minecraft:crossbow";
 const FIREWORK_ROCKET: &str = "minecraft:firework_rocket";
 
-/// `ProjectileWeaponItem.ARROW_ONLY`, for the arrows Anoma shoots.
+/// `ProjectileWeaponItem.ARROW_ONLY`: `#minecraft:arrows`.
 fn is_arrow(stack: &ItemStack) -> bool {
-    &*stack.item == "minecraft:arrow"
+    matches!(
+        &*stack.item,
+        "minecraft:arrow" | "minecraft:spectral_arrow" | "minecraft:tipped_arrow"
+    )
+}
+
+/// The effect an arrow shot from `ammo` gives what it hits: Glowing for
+/// 10 s from a spectral arrow, the potion's from a tipped one.
+pub(super) fn arrow_effect(ammo: &ItemStack) -> Option<(&'static str, i32)> {
+    match &*ammo.item {
+        "minecraft:spectral_arrow" => Some(("minecraft:glowing", 200)),
+        "minecraft:tipped_arrow" => super::dispenser::tipped_effect(ammo),
+        _ => None,
+    }
 }
 
 /// `Player.getProjectile`: what `weapon` supports in the off hand, then in
@@ -209,7 +222,7 @@ impl Game<'_> {
                 let kind = ProjectileKind::Arrow {
                     base_damage: 2.0,
                     critical: true,
-                    effect: None,
+                    effect: arrow_effect(ammo),
                 };
                 let mut arrow = Projectile::new(
                     kind,
@@ -277,5 +290,22 @@ mod tests {
         // The main hand's rocket, with the crossbow in the off hand.
         let hands = [(OFFHAND_SLOT, crossbow.as_ref()), (3, rocket.as_ref())];
         assert_eq!(projectile_slot(CROSSBOW, hands, &inventory), Some(3));
+    }
+
+    #[test]
+    fn bows_shoot_spectral_and_tipped_arrows() {
+        let mut inventory = vec![None; 36];
+        inventory[2] = Some(ItemStack::new("minecraft:spectral_arrow", 16));
+        inventory[4] = Some(ItemStack::new("minecraft:arrow", 4));
+        let bow = Some(ItemStack::new("minecraft:bow", 1));
+        let hands = [(OFFHAND_SLOT, None), (0, bow.as_ref())];
+        assert_eq!(projectile_slot("minecraft:bow", hands, &inventory), Some(2));
+        inventory[2] = Some(ItemStack::new("minecraft:tipped_arrow", 1));
+        assert_eq!(projectile_slot("minecraft:bow", hands, &inventory), Some(2));
+        assert_eq!(
+            arrow_effect(&ItemStack::new("minecraft:spectral_arrow", 1)),
+            Some(("minecraft:glowing", 200))
+        );
+        assert_eq!(arrow_effect(&ItemStack::new("minecraft:arrow", 1)), None);
     }
 }

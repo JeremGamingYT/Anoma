@@ -46,6 +46,19 @@ fn components_tag(s: &Stack, builtin: &Builtin, synced: &Dynamic) -> Option<Tag>
             continue;
         };
         let value = match c {
+            // InstrumentComponent: a goat horn's instrument, a reference to
+            // the synced `minecraft:instrument` registry (its id plus one).
+            Component::Raw(bytes) if *kind == component::INSTRUMENT => {
+                let mut r = anoma_protocol::buf::Reader::new(bytes);
+                let name = match (r.varint(), r.remaining()) {
+                    (Ok(id @ 1..), 0) => synced.name("minecraft:instrument", id - 1),
+                    _ => None,
+                };
+                let Some(name) = name else {
+                    continue;
+                };
+                Tag::String(name.into())
+            }
             // Read past, not decoded: the item keeps its prototype's value.
             Component::Raw(_) => continue,
             // Trim materials and patterns are synced registries, as enchantments are.

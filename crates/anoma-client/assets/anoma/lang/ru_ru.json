@@ -12,5 +12,7 @@
   "anoma.options.button_glyphs": "Символы кнопок",
   "anoma.options.menu_navigation": "Навигация по меню",
   "anoma.options.on_screen_keyboard": "Экранная клавиатура",
-  "anoma.options.smart_leaves": "Умная листва"
+  "anoma.options.smart_leaves": "Умная листва",
+  "anoma.options.inactivityFpsLimit.afk_or_unfocused": "АФК или фон",
+  "anoma.options.inactivityFpsLimit.afk_or_unfocused.tooltip": "Ограничивает частоту кадров до 30, как только окно игры теряет фокус или вы не касались управления 30 секунд."
 }

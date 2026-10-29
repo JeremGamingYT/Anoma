@@ -16,6 +16,14 @@ use crate::{
     ui,
 };
 
+/// The Reduce FPS When value's name: vanilla's two and Anoma's own.
+fn inactivity_key(s: &Settings) -> &'static str {
+    match s.inactivity_fps_limit.as_str() {
+        "minimized" => "options.inactivityFpsLimit.minimized",
+        "afk_or_unfocused" => "anoma.options.inactivityFpsLimit.afk_or_unfocused",
+        _ => "options.inactivityFpsLimit.afk",
+    }
+}
 fn tr(key: &str) -> Text {
     Text::translate(key, &[])
 }
@@ -275,13 +283,7 @@ impl Opt {
     /// OptionInstance's static or value-dependent tooltip translation.
     fn tooltip_key(self, s: &Settings) -> String {
         let key = match self {
-            Opt::InactivityFps => {
-                if s.inactivity_fps_limit == "minimized" {
-                    "options.inactivityFpsLimit.minimized"
-                } else {
-                    "options.inactivityFpsLimit.afk"
-                }
-            }
+            Opt::InactivityFps => inactivity_key(s),
             Opt::ChunkBuilder => [
                 "options.prioritizeChunkUpdates.none",
                 "options.prioritizeChunkUpdates.byPlayer",
@@ -494,11 +496,7 @@ impl Opt {
                 "options.attack.crosshair",
                 "options.attack.hotbar",
             ][usize::from(s.attack_indicator.min(2))]),
-            Opt::InactivityFps => tr(if s.inactivity_fps_limit == "minimized" {
-                "options.inactivityFpsLimit.minimized"
-            } else {
-                "options.inactivityFpsLimit.afk"
-            }),
+            Opt::InactivityFps => tr(inactivity_key(s)),
             Opt::ChunkBuilder => tr([
                 "options.prioritizeChunkUpdates.none",
                 "options.prioritizeChunkUpdates.byPlayer",
@@ -695,11 +693,12 @@ impl Opt {
             Opt::ImprovedTransparency => s.improved_transparency = !s.improved_transparency,
             Opt::AttackIndicator => s.attack_indicator = next(s.attack_indicator, 3),
             Opt::InactivityFps => {
-                s.inactivity_fps_limit = if s.inactivity_fps_limit == "afk" {
-                    "minimized".into()
-                } else {
-                    "afk".into()
+                s.inactivity_fps_limit = match s.inactivity_fps_limit.as_str() {
+                    "minimized" => "afk",
+                    "afk" => "afk_or_unfocused",
+                    _ => "minimized",
                 }
+                .into()
             }
             Opt::ChunkBuilder => s.prioritize_chunk_updates = next(s.prioritize_chunk_updates, 3),
             Opt::ToggleCrouch => s.toggle_crouch = !s.toggle_crouch,

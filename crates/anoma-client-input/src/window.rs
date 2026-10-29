@@ -34,11 +34,13 @@ pub fn scaled_pos(pos: f64, gui_scaled: i32, screen: i32) -> f64 {
     pos * f64::from(gui_scaled) / f64::from(screen)
 }
 
-/// `InactivityFpsLimit`.
+/// `InactivityFpsLimit`, and Anoma's `AfkOrUnfocused`: 30 FPS as soon as
+/// the window loses focus or the player has been idle for 30 seconds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InactivityFpsLimit {
     Minimized,
     Afk,
+    AfkOrUnfocused,
 }
 
 /// `FramerateLimitTracker.FramerateThrottleReason`.
@@ -68,6 +70,11 @@ pub struct FrameContext {
 /// `getThrottleReason`.
 pub fn throttle_reason(c: FrameContext) -> ThrottleReason {
     if !c.iconified && (c.focused || !c.exclusive_fullscreen) {
+        if c.inactivity == InactivityFpsLimit::AfkOrUnfocused
+            && (!c.focused || c.now_ms - c.latest_input_ms > 30_000)
+        {
+            return ThrottleReason::ShortAfk;
+        }
         if c.inactivity == InactivityFpsLimit::Afk {
             let afk = c.now_ms - c.latest_input_ms;
             if afk > 600_000 {
@@ -447,5 +454,40 @@ mod tests {
             chosen_present_mode(&[Fifo, Immediate], false, Some(Mailbox)),
             Some(Immediate)
         );
+    }
+
+    #[test]
+    fn afk_or_unfocused_drops_to_30_fps_on_focus_loss_or_30_idle_seconds() {
+        let c = FrameContext {
+            inactivity: InactivityFpsLimit::AfkOrUnfocused,
+            iconified: false,
+            focused: true,
+            exclusive_fullscreen: false,
+            now_ms: 40_000,
+            latest_input_ms: 39_000,
+            has_level: true,
+            has_screen: false,
+            has_overlay: false,
+        };
+        let unfocused = |mut c: FrameContext| {
+            c.focused = false;
+            c
+        };
+        let idle = |mut c: FrameContext| {
+            c.latest_input_ms = 9_000;
+            c
+        };
+        assert_eq!(framerate_limit(144, c), 144);
+        assert_eq!(framerate_limit(144, unfocused(c)), 30);
+        assert_eq!(framerate_limit(144, idle(c)), 30);
+        assert_eq!(framerate_limit(20, unfocused(c)), 20);
+        let mut minimized = c;
+        minimized.iconified = true;
+        assert_eq!(framerate_limit(144, minimized), 10);
+        // The vanilla modes still wait a minute.
+        let mut afk = idle(c);
+        afk.inactivity = InactivityFpsLimit::Afk;
+        assert_eq!(framerate_limit(144, afk), 144);
+        assert_eq!(framerate_limit(144, unfocused(afk)), 144);
     }
 }

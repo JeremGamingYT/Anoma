@@ -16,6 +16,10 @@ const OBFUSCATE_TOKEN: &str = "\u{a7}f\u{a7}k\u{a7}a\u{a7}b";
 const NAME_PREFIX: &str = "           ";
 /// `WinScreen.SECTION_HEADING`.
 const SECTION_HEADING: &str = "============";
+/// Anoma's credits, in vanilla's `credits.json` format.
+const CREDITS_JSON: &str = include_str!("../assets/anoma/texts/credits.json");
+/// Pixels a tick the credits scroll when shown without the poem.
+const CREDITS_SPEED: f32 = 1.25;
 /// A key the screen reacts to (`keyPressed` / `keyReleased`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Key {
@@ -53,9 +57,11 @@ pub struct WinScreen {
 }
 impl WinScreen {
     /// `WinScreen.<init>` and `init`: the poem (`texts/end.txt`) when `poem`,
-    /// the credits (`texts/credits.json`), then `texts/postcredits.txt`.
+    /// Anoma's credits (`anoma:texts/credits.json`, bundled unless a pack
+    /// replaces it), then `texts/postcredits.txt`. The credits alone scroll
+    /// faster than vanilla's 0.75 pixels a tick.
     pub fn new(poem: bool, root: &Path, player: &str, font: &Font) -> Self {
-        let speed = if poem { 0.5 } else { 0.75 };
+        let speed = if poem { 0.5 } else { CREDITS_SPEED };
         let mut screen = Self {
             poem,
             lines: Vec::new(),
@@ -79,13 +85,11 @@ impl WinScreen {
         if poem && let Some(s) = read("end.txt") {
             screen.add_poem_file(&s, player, font);
         }
-        if let Some(s) = read("credits.json") {
-            match serde_json::from_str(&s) {
-                Ok(json) => screen.add_credits_file(&json),
-                Err(e) => {
-                    log::error!("Couldn't load credits from file minecraft:texts/credits.json: {e}")
-                }
-            }
+        let credits = std::fs::read_to_string(root.join("assets/anoma/texts/credits.json"))
+            .unwrap_or_else(|_| CREDITS_JSON.to_owned());
+        match serde_json::from_str(&credits) {
+            Ok(json) => screen.add_credits_file(&json),
+            Err(e) => log::error!("Couldn't load credits from file anoma:texts/credits.json: {e}"),
         }
         if poem && let Some(s) = read("postcredits.txt") {
             screen.add_poem_file(&s, player, font);
@@ -317,8 +321,9 @@ mod tests {
             std::env::temp_dir().join(format!("anoma-win-screen-{}-{n}", std::process::id()));
         let texts = root.join("assets/minecraft/texts");
         std::fs::create_dir_all(&texts).unwrap();
+        std::fs::create_dir_all(root.join("assets/anoma/texts")).unwrap();
         std::fs::write(texts.join("end.txt"), end).unwrap();
-        std::fs::write(texts.join("credits.json"), credits).unwrap();
+        std::fs::write(root.join("assets/anoma/texts/credits.json"), credits).unwrap();
         std::fs::write(texts.join("postcredits.txt"), post).unwrap();
         let atlas = HudAtlas::fonts(&root).unwrap();
         let screen = WinScreen::new(poem, &root, "Steve", &atlas.font);
@@ -416,19 +421,19 @@ mod tests {
     #[test]
     fn keys_set_the_scroll_speed_and_direction() {
         let mut s = screen(false, "", CREDITS, "");
-        assert_eq!(s.scroll_speed, 0.75);
+        assert_eq!(s.scroll_speed, CREDITS_SPEED);
         s.key(Key::Space, true);
-        assert_eq!(s.scroll_speed, 0.75 * 5.0);
+        assert_eq!(s.scroll_speed, CREDITS_SPEED * 5.0);
         s.key(Key::LeftControl, true);
         s.key(Key::RightControl, true);
-        assert_eq!(s.scroll_speed, 0.75 * 35.0);
+        assert_eq!(s.scroll_speed, CREDITS_SPEED * 35.0);
         s.key(Key::Up, true);
-        assert_eq!(s.scroll_speed, -0.75 * 35.0);
+        assert_eq!(s.scroll_speed, -CREDITS_SPEED * 35.0);
         s.key(Key::Space, false);
-        assert_eq!(s.scroll_speed, -0.75);
+        assert_eq!(s.scroll_speed, -CREDITS_SPEED);
         s.key(Key::Up, false);
         s.key(Key::LeftControl, false);
-        assert_eq!(s.scroll_speed, 0.75);
+        assert_eq!(s.scroll_speed, CREDITS_SPEED);
         // The poem rolls at 0.5 pixels a tick.
         assert_eq!(screen(true, "", CREDITS, "").scroll_speed, 0.5);
     }
@@ -439,7 +444,7 @@ mod tests {
         let atlas = HudAtlas::fonts(Path::new("/nonexistent")).unwrap();
         let mut batch = HudBatch::new([640, 480]);
         let h = batch.height;
-        let end = (s.total_scroll_length as f32 + 2.0 * h + 24.0) / 0.75;
+        let end = (s.total_scroll_length as f32 + 2.0 * h + 24.0) / CREDITS_SPEED;
         s.draw(&mut batch, &atlas, end - 1.0, EndPortalFill::default());
         assert!(!s.finished(h));
         // Scrolling back never goes above the start.
@@ -449,5 +454,11 @@ mod tests {
         s.key(Key::Up, false);
         s.draw(&mut batch, &atlas, end + 1.0, EndPortalFill::default());
         assert!(s.finished(h));
+    }
+
+    #[test]
+    fn the_bundled_credits_are_anomas() {
+        let json: serde_json::Value = serde_json::from_str(CREDITS_JSON).unwrap();
+        assert_eq!(json[0]["section"], "Anoma");
     }
 }

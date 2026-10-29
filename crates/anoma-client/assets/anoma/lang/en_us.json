@@ -12,5 +12,7 @@
   "anoma.options.button_glyphs": "Button Glyphs",
   "anoma.options.menu_navigation": "Menu Navigation",
   "anoma.options.on_screen_keyboard": "On-Screen Keyboard",
-  "anoma.options.smart_leaves": "Smart Leaves"
+  "anoma.options.smart_leaves": "Smart Leaves",
+  "anoma.options.inactivityFpsLimit.afk_or_unfocused": "AFK or Unfocused",
+  "anoma.options.inactivityFpsLimit.afk_or_unfocused.tooltip": "Limits the framerate to 30 as soon as the game window loses focus or you have not touched the controls for 30 seconds."
 }

@@ -595,6 +595,25 @@ fn network_stack(
                 ));
             }
         }
+        // InstrumentComponent: a goat horn's instrument as a reference into
+        // the synced registry (its id plus one), as `item_sync` reads it.
+        if let Some(id) = d
+            .other("minecraft:instrument")
+            .and_then(|t| crate::save::text(Some(t)))
+            .and_then(|name| {
+                synced_id(
+                    "minecraft:instrument",
+                    &anoma_world::datafix::dynamic::namespaced(&name),
+                )
+            })
+        {
+            let mut w = anoma_protocol::buf::Writer::new();
+            w.varint(id + 1);
+            stack.added.push((
+                anoma_protocol::item::component::INSTRUMENT,
+                anoma_protocol::item::Component::Raw(w.data),
+            ));
+        }
         if let Some(id) = d.map_id {
             stack.added.push((
                 anoma_protocol::item::component::MAP_ID,

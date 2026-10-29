@@ -577,6 +577,12 @@ impl Game<'_> {
         self.tab_list = Default::default();
         self.border = Default::default();
         self.screen = Screen::Playing;
+        // KeyMapping.releaseAll: keys held as the connection dropped are not
+        // still held in the next world.
+        self.release_keys();
+        // Gui.onDisconnected: clearTitles and resetTitleTimes (a server's
+        // title or action bar does not follow the player to the menus).
+        self.titles = Default::default();
         self.container = None;
         self.clear_lod();
         self.pending_uploads.clear();

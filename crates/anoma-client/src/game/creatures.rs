@@ -2850,6 +2850,14 @@ impl Game<'_> {
                             .iter_mut()
                             .find(|m| m.id == id)
                             .is_some_and(|m| m.damage(amount, source));
+                        // SpectralArrow/Arrow.doPostHurtEffects: Glowing, or
+                        // the tipped arrow's potion, on the mob it hurt.
+                        if hurt
+                            && let Some((e, t)) = effect
+                            && let Some(m) = self.mobs.iter_mut().find(|m| m.id == id)
+                        {
+                            m.add_effect(e, *t, 0);
+                        }
                         if p.owner == Some(Who::Player) {
                             self.last_hurt_by_player.insert(id, self.lan_acting);
                             if hurt && let Some(m) = self.mobs.iter().find(|m| m.id == id) {

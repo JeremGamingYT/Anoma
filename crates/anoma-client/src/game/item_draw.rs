@@ -309,7 +309,7 @@ impl Game<'_> {
             batch,
             x,
             y,
-            self.started.elapsed().as_secs_f32(),
+            self.glint_clock,
             self.settings.file.double("glintSpeed") as f32,
             self.settings.file.double("glintStrength") as f32,
         );
@@ -324,7 +324,7 @@ impl Game<'_> {
             .map(|_| item_render::Glint {
                 speed: self.settings.file.double("glintSpeed") as f32,
                 alpha: self.settings.file.double("glintStrength") as f32,
-                millis: self.started.elapsed().as_secs_f32() * 1000.0,
+                millis: self.glint_clock * 1000.0,
                 scale: 0.5,
             })
     }
@@ -332,7 +332,7 @@ impl Game<'_> {
     /// (`item_render::Glint::scroll_ticks`).
     pub(super) fn glint_ticks(&self) -> f32 {
         item_render::Glint::scroll_ticks(
-            self.started.elapsed().as_secs_f32() * 1000.0,
+            self.glint_clock * 1000.0,
             self.settings.file.double("glintSpeed") as f32,
         )
     }

@@ -15,6 +15,10 @@ use zip::{CompressionMethod, ZipArchive};
 pub struct Zip {
     archive: ZipArchive<Cursor<Arc<[u8]>>>,
     entries: BTreeMap<String, usize>,
+    /// Folder-named entries that hold data (`pack.mcmeta/`), by the name
+    /// without the slash: Java's `ZipFile.getEntry(name)` falls back to
+    /// `name + "/"`, so vanilla reads them, though listings skip them.
+    slashed: BTreeMap<String, usize>,
 }
 fn invalid(e: impl std::fmt::Display) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, e.to_string())
@@ -25,23 +29,39 @@ impl Zip {
     }
     pub fn from_bytes(mut data: Vec<u8>) -> io::Result<Self> {
         normalize_end(&mut data);
-        let archive = ZipArchive::new(Cursor::new(Arc::from(data))).map_err(invalid)?;
-        let entries = (0..archive.len())
+        let mut archive = ZipArchive::new(Cursor::new(Arc::from(data))).map_err(invalid)?;
+        let names: Vec<(String, usize)> = (0..archive.len())
             .filter_map(|i| Some((archive.name_for_index(i)?.replace('\\', "/"), i)))
-            .filter(|(name, _)| !name.ends_with('/'))
             .collect();
-        Ok(Self { archive, entries })
+        let (mut entries, mut slashed) = (BTreeMap::new(), BTreeMap::new());
+        for (name, i) in names {
+            match name.strip_suffix('/') {
+                None => {
+                    entries.insert(name, i);
+                }
+                Some(file) if archive.by_index_raw(i).is_ok_and(|e| e.size() > 0) => {
+                    slashed.insert(file.to_owned(), i);
+                }
+                Some(_) => {}
+            }
+        }
+        Ok(Self {
+            archive,
+            entries,
+            slashed,
+        })
     }
     pub fn names(&self) -> impl Iterator<Item = &str> {
         self.entries.keys().map(String::as_str)
     }
     pub fn contains(&self, name: &str) -> bool {
-        self.entries.contains_key(name)
+        self.entries.contains_key(name) || self.slashed.contains_key(name)
     }
     pub fn read(&self, name: &str) -> io::Result<Vec<u8>> {
         let &index = self
             .entries
             .get(name)
+            .or_else(|| self.slashed.get(name))
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, name.to_owned()))?;
         // A clone shares the bytes and the central directory: reading needs `&mut`.
         let mut archive = self.archive.clone();
@@ -224,6 +244,27 @@ mod tests {
                 .unwrap(),
             b"Also try Anoma!"
         );
+    }
+
+    #[test]
+    fn a_file_stored_under_a_folder_name_still_reads() {
+        // Loka's server pack (#3413): `pack.mcmeta/` holds the metadata.
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let stored = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        w.start_file("pack.mcmeta/", stored).unwrap();
+        w.write_all(br#"{"pack":{"pack_format":75}}"#).unwrap();
+        w.add_directory("assets/", stored).unwrap();
+        let zip = Zip::from_bytes(w.finish().unwrap().into_inner()).unwrap();
+        assert!(zip.contains("pack.mcmeta"));
+        assert_eq!(
+            zip.read("pack.mcmeta").unwrap(),
+            br#"{"pack":{"pack_format":75}}"#
+        );
+        // Listings leave folder entries out; an empty folder never reads.
+        assert_eq!(zip.names().count(), 0);
+        assert!(!zip.contains("assets"));
     }
 
     #[test]
