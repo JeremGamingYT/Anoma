@@ -54,6 +54,33 @@ pub fn game_home() -> PathBuf {
     }
 }
 
+/// The folder to play in when the program was started from its own folder (a
+/// double-click in Explorer, a shortcut without "Start in"): the checkout that
+/// holds the prepared resources for a build under `target/`, else the game
+/// home. None keeps the working folder, which a terminal, the launcher and
+/// anoma-ctl choose on purpose.
+pub fn home_for_start(cwd: &Path, exe_dir: &Path, version: &str) -> Option<PathBuf> {
+    let same = |a: &Path, b: &Path| match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    };
+    if !same(cwd, exe_dir) {
+        return None;
+    }
+    let prepared = Path::new(".local/anoma-client").join(version);
+    let manifest = |dir: &Path| dir.join("anoma-resources.json").is_file();
+    if manifest(&exe_dir.join("resources")) {
+        return Some(game_home());
+    }
+    Some(
+        exe_dir
+            .ancestors()
+            .skip(1)
+            .find(|dir| manifest(&dir.join(&prepared)))
+            .map_or_else(game_home, Path::to_path_buf),
+    )
+}
+
 /// `logs/` and `crash-reports/` of a game folder.
 pub fn logs_dir(home: &Path) -> PathBuf {
     home.join("logs")
@@ -466,6 +493,30 @@ pub fn newest_crash_report(home: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn started_from_its_own_folder_the_game_plays_in_the_checkout() {
+        let root = std::env::temp_dir().join(format!("anoma-home-test-{}", std::process::id()));
+        let exe = root.join("target/fast");
+        fs::create_dir_all(&exe).unwrap();
+        fs::create_dir_all(root.join(".local/anoma-client/26.3")).unwrap();
+        fs::write(
+            root.join(".local/anoma-client/26.3/anoma-resources.json"),
+            "{}",
+        )
+        .unwrap();
+        // Started from a terminal or the launcher: the working folder stays.
+        assert_eq!(home_for_start(&root, &exe, "26.3"), None);
+        // Double-clicked: the checkout, not target/fast.
+        assert_eq!(home_for_start(&exe, &exe, "26.3"), Some(root.clone()));
+        // No prepared resources above it: the game home.
+        assert_eq!(home_for_start(&exe, &exe, "0.0"), Some(game_home()));
+        // A release keeps its resources beside the program and plays in the game home.
+        fs::create_dir_all(exe.join("resources")).unwrap();
+        fs::write(exe.join("resources/anoma-resources.json"), "{}").unwrap();
+        assert_eq!(home_for_start(&exe, &exe, "26.3"), Some(game_home()));
+        fs::remove_dir_all(&root).unwrap();
+    }
 
     fn day(d: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, d).unwrap()

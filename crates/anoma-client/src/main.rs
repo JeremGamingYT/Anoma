@@ -19,6 +19,19 @@ fn main() {
     let (home, side, thread) = if args.iter().any(|a| a == "--dedicated") {
         (std::path::PathBuf::from("."), "server", "Server thread")
     } else {
+        // Double-clicked, the game would play in its build or install folder:
+        // no saves or options there, and a resource cache to rebuild.
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(std::path::Path::to_path_buf));
+        if let (Ok(cwd), Some(exe_dir)) = (std::env::current_dir(), exe_dir)
+            && let Some(home) = logging::home_for_start(&cwd, &exe_dir, anoma_core::VANILLA_VERSION)
+        {
+            let _ = std::fs::create_dir_all(&home);
+            if let Err(e) = std::env::set_current_dir(&home) {
+                eprintln!("Anoma: could not play in {}: {e}", home.display());
+            }
+        }
         (logging::game_home(), "client", "Render thread")
     };
     if !help {
