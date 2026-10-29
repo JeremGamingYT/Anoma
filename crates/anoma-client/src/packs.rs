@@ -395,7 +395,9 @@ fn link(target: &Path, at: &Path) -> io::Result<()> {
     if target.is_dir() {
         Ok(())
     } else {
-        fs::copy(target, at).map(|_| ())
+        // A hard link shares vanilla's bytes: no copy, no disk space. Another
+        // volume (or a file system without links) takes a copy.
+        fs::hard_link(target, at).or_else(|_| fs::copy(target, at).map(|_| ()))
     }
 }
 /// Build `out` as `vanilla` with the packs' files layered on top (packs in

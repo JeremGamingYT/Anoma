@@ -170,6 +170,22 @@ impl Poses {
     pub fn is_hidden(&self, part: &Part) -> bool {
         self.hidden.contains(&part.name)
     }
+    /// Whether the part named `n` is hidden (`ModelPart.visible` cleared).
+    pub fn hidden_named(&self, n: &str) -> bool {
+        self.hidden.contains(n)
+    }
+    /// Whether the part named `n` skips its own cubes (`skipDraw`).
+    pub fn skips_named(&self, n: &str) -> bool {
+        self.skipped.contains(n)
+    }
+    /// `ModelPart.skipDraw = v`.
+    pub fn set_skip_draw(&mut self, n: &str, v: bool) {
+        if v {
+            self.skipped.insert(n.to_owned());
+        } else {
+            self.skipped.remove(n);
+        }
+    }
 }
 /// The LivingEntityRenderState values setupAnim reads.
 #[derive(Clone, Copy, Debug)]

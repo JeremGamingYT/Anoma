@@ -28,6 +28,7 @@ pub mod breaking;
 pub mod brewing;
 pub mod camera;
 pub mod cauldron;
+pub mod cem;
 pub mod chat;
 pub mod chunk;
 pub mod chunk_map;

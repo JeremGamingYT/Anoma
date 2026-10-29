@@ -4215,6 +4215,15 @@ impl Game<'_> {
     }
     /// Mob models and projectiles for the entity pass.
     pub(super) fn mob_geometry(&self, camera: glam::DVec3, alpha: f64, out: &mut Vec<Vertex>) {
+        // What the packs' custom entity models read alike this frame.
+        let feet = camera - glam::DVec3::new(0.0, f64::from(self.eye), 0.0);
+        anoma_client::cem::runtime::begin_frame(anoma_client::cem::runtime::FrameInputs {
+            player_pos: feet.as_vec3().to_array(),
+            player_rot: [self.pitch.to_radians(), self.yaw.to_radians()],
+            game_time: self.world.game_time as f64 + alpha,
+            day_time: self.world.day_time as f64 + alpha,
+            paused: self.pauses_game(),
+        });
         let atlas = &self.gui.atlas;
         let lookup = |name: &str| atlas.sprites.get(name).map(|r| [r.u0, r.v0, r.u1, r.v1]);
         let scale = self.view_scale();

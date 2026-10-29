@@ -1035,6 +1035,100 @@ fn species_scale(m: &Mob, alpha: f32) -> glam::Mat4 {
         _ => glam::Mat4::IDENTITY,
     }
 }
+/// The custom model a pack gives the model layer `key` (`cow#main`; `main`
+/// is the type's own).
+fn custom_model(
+    m: &Mob,
+    key: &str,
+    vanilla: &Part,
+    data: &MobData,
+) -> Option<std::sync::Arc<crate::cem::model::CemModel>> {
+    let library = data.cem.read().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if key == "main" {
+        library.model(&m.kind.model_key(), vanilla)
+    } else {
+        library.model(key, vanilla)
+    }
+}
+
+/// What a custom model's animation reads of the mob (EMF's variables, in
+/// `cem::program::INPUTS` order); the frame's own values come later.
+fn cem_inputs(m: &Mob, s: &anim::State, alpha: f32) -> Vec<f32> {
+    use crate::cem::program::{INPUTS, input};
+    let mut v = vec![0.0; INPUTS.len()];
+    let mut set = |name: &str, x: f32| v[input(name).expect(name)] = x;
+    let flag = |b: bool| if b { 1.0 } else { 0.0 };
+    let lerp = |a: f32, b: f32| a + (b - a) * alpha;
+    set("limb_swing", s.pos);
+    set("limb_speed", s.speed.min(1.0));
+    set("age", s.age % 27720.0);
+    set("head_yaw", s.y_rot);
+    set("head_pitch", s.x_rot);
+    set("swing_progress", s.swing);
+    set("hurt_time", if m.hurt_time > 0 { m.hurt_time as f32 - alpha } else { 0.0 });
+    set("death_time", if m.death_time > 0 { m.death_time as f32 + alpha } else { 0.0 });
+    set("health", m.health);
+    set("max_health", m.attrs.max_health);
+    set("id", (m.id.wrapping_mul(2_654_435_761) & 0x7FFF_FFFF) as f32 % 27720.0);
+    let a = f64::from(alpha);
+    set("pos_x", (m.previous.x + (m.position.x - m.previous.x) * a) as f32);
+    set("pos_y", (m.previous.y + (m.position.y - m.previous.y) * a) as f32);
+    set("pos_z", (m.previous.z + (m.position.z - m.previous.z) * a) as f32);
+    set("rot_x", lerp(m.previous_head_pitch, m.head_pitch).to_radians());
+    set(
+        "rot_y",
+        (m.previous_body_yaw + wrap(m.body_yaw - m.previous_body_yaw) * alpha).to_radians(),
+    );
+    // Velocity along and across the body's facing, as a fraction of speed.
+    let (vx, vz) = (m.velocity.x as f32, m.velocity.z as f32);
+    let speed = (vx * vx + vz * vz).sqrt();
+    if speed > 0.0 {
+        let l = (90.0 - m.yaw).to_radians();
+        set("move_forward", -(vx * l.cos() - vz * l.sin()) / speed);
+        set("move_strafing", -(vx * l.sin() + vz * l.cos()) / speed);
+    }
+    let in_water = m.fluids.in_water;
+    set("fluid_depth", flag(in_water));
+    set("fluid_depth_down", flag(in_water));
+    set("fluid_depth_up", flag(m.fluids.eye_in_water));
+    set("anger_time", m.extra.anger.max(0) as f32);
+    set("is_alive", flag(m.alive()));
+    set("is_on_ground", flag(m.on_ground));
+    set("is_in_water", flag(in_water));
+    set("is_in_lava", flag(m.fluids.in_lava));
+    set("is_wet", flag(in_water));
+    set("is_hurt", flag(m.hurt_time > 0));
+    set("is_riding", flag(m.extra.passenger));
+    set("is_ridden", flag(m.rider.is_some()));
+    set("is_child", flag(m.is_baby()));
+    set("is_sneaking", flag(m.extra.crouching));
+    set("is_sprinting", flag(m.extra.sprinting));
+    set("is_aggressive", flag(m.extra.anger > 0));
+    set("is_burning", flag(m.fire_ticks > 0));
+    set("is_tamed", flag(m.extra.tame));
+    set("is_sitting", flag(m.extra.sitting));
+    set("is_invisible", flag(m.invisible));
+    set("is_glowing", flag(m.glowing));
+    set("is_climbing", flag(m.climbing));
+    set("is_gliding", flag(m.extra.fall_flying));
+    set("is_blocking", flag(m.extra.blocking));
+    let using = m.extra.using_item > 0;
+    let right_handed = !m.extra.main_hand_left;
+    let swinging = s.swing != 0.0 || using;
+    set("is_using_item", flag(using));
+    set("is_right_handed", flag(right_handed));
+    set("is_swinging_right_arm", flag(swinging && right_handed));
+    set("is_swinging_left_arm", flag(swinging && !right_handed));
+    let (right, left) = if right_handed {
+        (&m.extra.main_hand, &m.extra.off_hand)
+    } else {
+        (&m.extra.off_hand, &m.extra.main_hand)
+    };
+    set("is_holding_item_right", flag(right.is_some()));
+    set("is_holding_item_left", flag(left.is_some()));
+    v
+}
+
 /// Draw a part tree with a pose map, texture rect, colour and light.
 #[allow(clippy::too_many_arguments)]
 pub fn draw(
@@ -1202,8 +1296,16 @@ fn render_visible(
         .layer(&model_key)
         .cloned()
         .unwrap_or_else(|| m.kind.model.clone());
+    // A pack's custom model (.jem) stands in for the vanilla one and poses
+    // itself over the vanilla pose.
+    let inputs = std::cell::OnceCell::new();
+    let custom = custom_model(m, &model_key, &model, data);
+    let model = custom.as_ref().map_or(model, |c| c.part.clone());
     let mut poses = Poses::new(&model);
     anim::setup(m, &s, &mut poses, &data.animations);
+    if let Some(c) = &custom {
+        crate::cem::runtime::animate(m.id, c, inputs.get_or_init(|| cem_inputs(m, &s, alpha)), &mut poses);
+    }
     let draw_body = |out: &mut Vec<Vertex>| {
         if let Some(uv) = atlas(&texture) {
             draw(
@@ -1250,8 +1352,18 @@ fn render_visible(
         let Some(uv) = atlas(&layer.texture) else {
             continue;
         };
+        let custom = custom_model(m, &layer.model, &part, data);
+        let part = custom.as_ref().map_or(part, |c| c.part.clone());
         layer_poses.reset(&part);
         anim::setup(m, &s, &mut layer_poses, &data.animations);
+        if let Some(c) = &custom {
+            crate::cem::runtime::animate(
+                m.id,
+                c,
+                inputs.get_or_init(|| cem_inputs(m, &s, alpha)),
+                &mut layer_poses,
+            );
+        }
         if matches!(m.species(), Species::Villager | Species::ZombieVillager)
             && let Some((folder, variant)) = layer
                 .texture
@@ -1567,6 +1679,7 @@ mod tests {
             biome_tags: Default::default(),
             entity_tags: Default::default(),
             villager_hats: Default::default(),
+            cem: Default::default(),
             pois: Default::default(),
         };
         let atlas = |name: &str| {
@@ -1655,6 +1768,7 @@ mod tests {
             biome_tags: Default::default(),
             entity_tags: Default::default(),
             villager_hats: Default::default(),
+            cem: Default::default(),
             pois: Default::default(),
         };
         for left in [false, true] {

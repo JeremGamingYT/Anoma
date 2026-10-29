@@ -233,6 +233,12 @@ impl Game<'_> {
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner) =
             anoma_client::mobs::villager_hats::VillagerHats::load(&root);
+        *self
+            .res
+            .mob_data()
+            .cem
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = anoma_client::cem::Library::load(&root);
         anoma_client::ui::load_metadata(&root);
         lang::set(lang::Language::load(&[&root], &lang::code()));
         self.refresh_remote_language();
